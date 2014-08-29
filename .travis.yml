@@ -1,10 +1,10 @@
 language: cpp
 compiler:
-  - clang
+    - clang
 notifications:
-  email: false
+    email: false
 env:
-  matrix:
+    - JULIAVERSION="juliareleases" 
     - JULIAVERSION="julianightlies"
 before_install:
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
@@ -14,6 +14,6 @@ before_install:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd())'
-  - julia --code-coverage test/runtests.jl
+  - julia -e 'Pkg.test("MetadataTools", coverage=true)'
 after_success:
-  - julia -e 'Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'cd(Pkg.dir("MetadataTools")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
