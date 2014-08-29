@@ -7,9 +7,10 @@
 
 module MetadataTools
 
-import Requests, JSON
+import Requests, JSON, Graphs
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
+export get_pkgs_dep_graph, get_pkg_dep_graph
 
 #######################################################################
 # PkgMeta           Represents a packages entry in METADATA.jl
@@ -24,6 +25,10 @@ immutable PkgMeta
     url::String
     versions::Vector{PkgMetaVersion}
 end
+Base.isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
+(==)(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
+
+typealias PkgMetaDict Dict{String,PkgMeta}
 
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
@@ -62,7 +67,7 @@ end
 
 #######################################################################
 # get_pkg 
-#   return a structure with all information about the package listed
+#   Return a PkgMeta with all information about the package listed
 #   in METADATA, e.g.
 #
 #   julia> get_pkg("DataFrames")
@@ -92,11 +97,11 @@ function get_pkg(pkg_name::String; meta_path::String=Pkg.dir("METADATA"))
     for dir in readdir(vers_path)
         ver_num = convert(VersionNumber, dir)
         ver_path = joinpath(vers_path, dir)
-        sha = chomp(readall(joinpath(ver_path,"sha1")))
+        sha = strip(readall(joinpath(ver_path,"sha1")))
         req_path = joinpath(ver_path,"requires")
         reqs = String[]
         if isfile(req_path)
-            req_file = map(chomp,split(readall(req_path),"\n"))
+            req_file = map(strip,split(readall(req_path),"\n"))
             for req in req_file
                 length(req) == 0 && continue
                 req[1] == '#' && continue
@@ -112,18 +117,19 @@ end
 
 #######################################################################
 # get_all_pkg
-# Walks through the METADATA folder, returns a vector of PkgMetas
-# for every package found.
+# Returns a dictionary of [package_name => PkgMeta] for every package
+# in a METADATA folder.
 function get_all_pkg(; meta_path::String=Pkg.dir("METADATA"))
     !isdir(meta_path) && error("Couldn't find METADATA folder at $meta_path")
     
-    pkgs = PkgMeta[]
+    pkgs = Dict{String,PkgMeta}()
     for fname in readdir(meta_path)
         # Skip files
         !isdir(joinpath(meta_path, fname)) && continue
-        # Skip "hidden" folders
+        # Skip "hidden" folders like .test
         (fname[1] == '.') && continue
-        push!(pkgs, get_pkg(fname, meta_path=meta_path))
+        # Get the package and shove it in the dictionary
+        pkgs[fname] = get_pkg(fname, meta_path=meta_path)
     end
 
     return pkgs
@@ -166,7 +172,10 @@ end
 #######################################################################
 # get_pkg_info
 # Get information from Github (etc?) about a package.
-function get_pkg_info(pkg::MetadataTools.PkgMeta; token=nothing)
+function get_pkg_info(pkgs::PkgMetaDict; token=nothing)
+    return [p[1] => get_pkg_info(p[2],token=token) for p in pkgs]
+end
+function get_pkg_info(pkg::PkgMeta; token=nothing)
     get_pkg_info(pkg.url, token=token)
 end
 function get_pkg_info(pkg_url::String; token=nothing)
@@ -197,6 +206,7 @@ end
 
 # Github version [not exported]
 function get_pkg_info_github(pkg_url::String; token=nothing)
+    println(pkg_url)
     # If a token is provided, use it
     token_arg = (token == nothing) ? "" : "?access_token=$(token)"
 
@@ -209,20 +219,33 @@ function get_pkg_info_github(pkg_url::String; token=nothing)
     # description, homepage, stargazers_count, watchers_count        
     # API: GET /repos/:owner/:repo/
     # https://developer.github.com/v3/repos/#get
+    sleep(0.5) # Avoid rate limiting?
     url = "https://api.github.com/repos/$(owner_pkg)$(token_arg)"
     req1 = JSON.parse(retry_get(url))
-    # Deal with case where somehow the homepage entry is there but
+    # Deal with case where somehow the entry is there but
     # null, instead of just being absent.
+    if get(req1, "html_url", nothing) == nothing
+        req1["html_url"] = "No URL available."
+    end
+    if get(req1, "description", nothing) == nothing
+        req1["description"] = "No desciption available."
+    end
     if get(req1, "homepage", nothing) == nothing
         req1["homepage"] = "No homepage available."
     end
+
 
     # Request 2 gets contributor information, including their name,
     # website, and commit count
     # API: GET /repos/:owner/:repo/stats/contributors
     # https://developer.github.com/v3/repos/statistics/#contributors
+    sleep(0.5) # Avoid rate limiting?
     url = "https://api.github.com/repos/$(owner_pkg)/stats/contributors$(token_arg)"
     req2 = JSON.parse(retry_get(url))
+    if typeof(req2) <: Dict
+        warn("$url returned error message: $req2")  # probably caused by move
+        req2 = {}
+    end
 
     # Request 3 gets the clone count, and isn't officially supported
     # by GitHub. Need to be logged in for it to work, so disabled until
@@ -233,7 +256,6 @@ function get_pkg_info_github(pkg_url::String; token=nothing)
     println(Requests.get(url).headers)
     req3 = retry_get(url)
     println(req3)=#
-
 
     return PkgInfo(
         get(req1, "html_url", "No URL available."),
@@ -246,6 +268,77 @@ function get_pkg_info_github(pkg_url::String; token=nothing)
             Contributor(con["author"]["login"],con["author"]["html_url"]))
             for con in req2]
         )
+end
+
+#######################################################################
+# get_pkgs_dep_graph
+# Given a vector of packages (i.e. the output of get_all_pkg) build
+# a Graphs.jl directed graph, where there is an edge from PkgA to 
+# PkgB iff PkgA directly requires PkgB. Alternatively, if reverse
+# is true, reverse the direction of the arcs.
+typealias PkgGraph Graphs.GenericGraph
+function get_pkgs_dep_graph(pkgs::PkgMetaDict; reverse=false)
+    g = Graphs.graph(collect(values(pkgs)), Graphs.Edge{PkgMeta}[], is_directed=true)
+    
+    for pkg in values(pkgs)
+        if length(pkg.versions) == 0
+            # This package doesn't have any tagged versions, so
+            # we can't figure out anything about what it depends
+            # on from METADATA alone.
+            continue
+        end
+        # We use the most recent version - TODO could be to add
+        # an option to modify this behaviour.
+        pkgver = pkg.versions[end]
+        for req in pkgver.requires
+            if contains(req, "julia")
+                # Julia version dependency, skip it
+                continue
+            end
+            other_pkg = pkgs[(req[1] == '@') ? split(req," ")[2] : split(req," ")[1]]
+            if reverse
+                Graphs.add_edge!(g, other_pkg, pkg)
+            else    
+                Graphs.add_edge!(g, pkg, other_pkg)
+            end
+        end
+    end
+
+    return g
+end
+
+# get_pkg_dep_graph
+# Get the dependency graph for a single package by running a BFS/DFS on
+# the full dependency graph starting from the desired package
+# We do this by creating a Graphs.jl visitor, then just passing that into
+# the traversal algorithm
+type SubgraphBuilderVisitor <: Graphs.AbstractGraphVisitor
+    sub_graph::PkgGraph
+    added::Dict{PkgMeta,Bool}
+end
+SubgraphBuilderVisitor() = SubgraphBuilderVisitor(
+        Graphs.graph(PkgMeta[],Graphs.Edge{PkgMeta}[],is_directed=true),
+        Dict{PkgMeta,Bool}())
+function add_vert_no_dupe(visitor::SubgraphBuilderVisitor, v::PkgMeta)
+    if !get(visitor.added, v, false)
+        Graphs.add_vertex!(visitor.sub_graph, v)
+        visitor.added[v] = true
+    end
+end
+function Graphs.examine_neighbor!(visitor::SubgraphBuilderVisitor, u::PkgMeta, v::PkgMeta, vcolor::Int, ecolor::Int)
+    add_vert_no_dupe(visitor, u)
+    add_vert_no_dupe(visitor, v)
+    Graphs.add_edge!(visitor.sub_graph, u, v)
+end
+
+get_pkg_dep_graph(pkg_name::String, pkgs::PkgMetaDict; reverse=false) =
+    get_pkg_dep_graph(pkgs[pkg_name], pkgs, reverse=reverse)
+get_pkg_dep_graph(pkg::PkgMeta, pkgs::PkgMetaDict; reverse=false) =
+    get_pkg_dep_graph(pkg, get_pkgs_dep_graph(pkgs,reverse=reverse))
+function get_pkg_dep_graph(pkg::PkgMeta, dep_graph::PkgGraph)
+    v = SubgraphBuilderVisitor()
+    Graphs.traverse_graph(dep_graph, Graphs.BreadthFirst(), pkg, v)
+    return v.sub_graph
 end
 
 end  # module
