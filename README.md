@@ -10,7 +10,7 @@ Functionality to analyze the structure of Julia's METADATA repository.
 
 ## Documentation
 
-The code is the documentation, but here are the comments reproduced for your convenience.
+... is pretty much just the comments in the code. I also gave a talk about MetadataTools.jl and I've posted the [associated IJulia Notebook](http://iaindunning.com/2014/metadatatools.html). Here are the code comments reproduced for your convenience:
 
 #### `get_pkg(pkg_name::String; meta_path::String=Pkg.dir("METADATA"))`
 
