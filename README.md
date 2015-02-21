@@ -16,7 +16,7 @@ Functionality to analyze the structure of Julia's METADATA repository.
 
 Return a structure with all information about the package listed in METADATA, e.g.
 ```
-  julia> get_pkg("...", "DataFrames")
+  julia> get_pkg("DataFrames")
   DataFrames   git://github.com/JuliaStats/DataFrames.jl.git 
     0.0.0,a63047,Options,StatsBase
     0.1.0,7b1c6b,julia 0.1- 0.2-,Options,StatsBase
