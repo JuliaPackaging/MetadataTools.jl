@@ -3,8 +3,9 @@ MetadataTools.jl
 
 Functionality to analyze the structure of Julia's METADATA repository.
 
-[![Build Status](https://travis-ci.org/IainNZ/MetadataTools.jl.svg)](https://travis-ci.org/IainNZ/MetadataTools.jl)
-[![Coverage Status](https://img.shields.io/coveralls/IainNZ/MetadataTools.jl.svg)](https://coveralls.io/r/IainNZ/MetadataTools.jl)
+[![Build Status](https://travis-ci.org/IainNZ/MetadataTools.jl.svg?branch=master)](https://travis-ci.org/IainNZ/MetadataTools.jl)
+[![Coverage Status](https://coveralls.io/repos/IainNZ/MetadataTools.jl/badge.svg?branch=master)](https://coveralls.io/r/IainNZ/MetadataTools.jl?branch=master)
+[![MetadataTools](http://pkg.julialang.org/badges/MetadataTools_release.svg)](http://pkg.julialang.org/?pkg=MetadataTools&ver=release)
 
 **Installation**: `Pkg.add("MetadataTools")`
 
