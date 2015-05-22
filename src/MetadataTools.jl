@@ -8,6 +8,7 @@
 module MetadataTools
 
 import Requests, JSON, Graphs
+using Compat
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
 export get_pkgs_dep_graph, get_pkg_dep_graph
@@ -62,7 +63,7 @@ immutable PkgInfo
     homepage::String
     stars::Int
     watchers::Int
-    contributors::Vector{(Int,Contributor)}  # (commit_count,Contrib.)
+    contributors::Vector{@compat Tuple{Int,Contributor}}  # (commit_count,Contrib.)
 end
 
 #######################################################################
