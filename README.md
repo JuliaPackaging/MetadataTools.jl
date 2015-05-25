@@ -11,7 +11,7 @@ This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.
 - additional options when generating graphs in `dot` format
 
 Example of generated graph: 
-<IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/master/test/tp_Quaternions.pdf">
+<IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Quaternions.pdf">
 
 ----
 #ORIGINAL DOCUMENTATION
