@@ -338,8 +338,12 @@ get_pkg_dep_graph(pkg::PkgMeta, pkgs::PkgMetaDict; reverse=false) =
     get_pkg_dep_graph(pkg, get_pkgs_dep_graph(pkgs,reverse=reverse))
 function get_pkg_dep_graph(pkg::PkgMeta, dep_graph::PkgGraph)
     v = SubgraphBuilderVisitor()
+    @show dep_graph
+    @show pkg
     Graphs.traverse_graph(dep_graph, Graphs.BreadthFirst(), pkg, v)
     return v.sub_graph
 end
 
+include(joinpath(Pkg.dir(),"MetadataTools","src","installedPkgStatus.jl"))
+    
 end  # module
