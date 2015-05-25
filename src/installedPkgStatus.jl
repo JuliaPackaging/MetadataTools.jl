@@ -1,3 +1,14 @@
+######################################################################
+# This file:
+# (c) Alain Lichnewsky, 2015
+# Licensed under the MIT License
+
+# Package :  MetadataTools
+# https://github.com/IainNZ/MetadataTools.jl
+# (c) Iain Dunning 2014
+# Licensed under the MIT License
+######################################################################
+
 module installedPkgStatus
 
 using MetadataTools
@@ -39,14 +50,14 @@ function getVersionsPM(vernum::VersionNumber,sha::String, dir)
         # otherwise they are deemed obsolete
         b = readall(`bash -c " cd $dir; git tag --contains $sha 2>/dev/null"`)
         listTags = split(b,"\n")
-        #println("tags in $dir containing $sha:\n\t",listTags)
+
         for tag in listTags
             result = Dict{String,Any}()
             tag==""  && continue
             # The echo final step ensures we return a 0 retcode, otherwise
             # julia will complain. I do not know what happens on Windows(TM) 
             b = readall(`bash -c " cd $dir; git tag -v $tag 2>/dev/null; echo"`)
-
+         
             # Analyze, get the most recent tag and its sha   
             for x in split(b,"\n")
                  m = match(rxTag,x)
@@ -67,7 +78,7 @@ function getVersionsPM(vernum::VersionNumber,sha::String, dir)
                 pmvBld = (ASCIIString(result["object"][1:8]),)
              else
                 pmvPre = ("NEW",)
-                pmvBld = ()
+                pmvBld = Tuple{Vararg{ASCIIString}}(())
              end
              vn = VersionNumber(0,0,0,pmvPre, pmvBld)
 
@@ -76,8 +87,14 @@ function getVersionsPM(vernum::VersionNumber,sha::String, dir)
              reqs =map(ASCIIString,keys(getDependencies(dir)))
              push!(versions, PkgMetaVersion(vn,sha,reqs))        
         end
+        if length(versions) ==  0
+             sha1  = ASCIIString(sha)[1:8]
+             vn = VersionNumber(0,0,0,("NTAG",), (sha1,))
+             push!(versions, PkgMetaVersion(vn,sha, Vector{ASCIIString}(0)))                    
+        end
         return versions
 end
+
 
 const  rxLog = Base.compile( 
    r"^                                  # start
@@ -106,7 +123,6 @@ function getCommitInfo(dir::String)
      end
      result
 end
-
 
 function pkgInstalledAsPkgMeta()
     #println("In  pkgInstalledAsPkgMeta")

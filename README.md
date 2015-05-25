@@ -3,11 +3,21 @@ MetadataTools.jl
 
 Functionality to analyze the structure of Julia's METADATA repository.
 
-[![Build Status](https://travis-ci.org/IainNZ/MetadataTools.jl.svg?branch=master)](https://travis-ci.org/IainNZ/MetadataTools.jl)
-[![Coverage Status](https://coveralls.io/repos/IainNZ/MetadataTools.jl/badge.svg?branch=master)](https://coveralls.io/r/IainNZ/MetadataTools.jl?branch=master)
-[![MetadataTools](http://pkg.julialang.org/badges/MetadataTools_release.svg)](http://pkg.julialang.org/?pkg=MetadataTools&ver=release)
+
+## Added functionality
+
+This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.jl">original development</A>:
+- analysis of installed packages from `~/julia.d/vNN.MM/` directory
+- additional options when generating graphs in `dot` format
+
+Example of generated graph: 
+<IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/master/test/tp_Quaternions.pdf">
+
+----
+#ORIGINAL DOCUMENTATION
 
 **Installation**: `Pkg.add("MetadataTools")`
+
 
 ## Documentation
 

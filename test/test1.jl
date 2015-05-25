@@ -1,7 +1,7 @@
 using MetadataTools
 using Graphs
 
-ipkgs = get_all_pkg()
+pkgs = get_all_pkg()
 #map(get_upper_limit, values(pkgs))
 #dump(get_pkg_info(pkgs["JuMP"]))
 
