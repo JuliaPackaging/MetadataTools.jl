@@ -69,7 +69,8 @@ end
 #######################################################################
 # get_pkg 
 #   Return a PkgMeta with all information about the package listed
-#   in METADATA, e.g.
+#   in METADATA, with .versions sorted by version number.
+#   e.g.
 #
 #   julia> get_pkg("DataFrames")
 #   DataFrames   git://github.com/JuliaStats/DataFrames.jl.git
@@ -338,12 +339,12 @@ get_pkg_dep_graph(pkg::PkgMeta, pkgs::PkgMetaDict; reverse=false) =
     get_pkg_dep_graph(pkg, get_pkgs_dep_graph(pkgs,reverse=reverse))
 function get_pkg_dep_graph(pkg::PkgMeta, dep_graph::PkgGraph)
     v = SubgraphBuilderVisitor()
-    @show dep_graph
-    @show pkg
     Graphs.traverse_graph(dep_graph, Graphs.BreadthFirst(), pkg, v)
     return v.sub_graph
 end
 
 include(joinpath(Pkg.dir(),"MetadataTools","src","installedPkgStatus.jl"))
+include(joinpath(Pkg.dir(),"MetadataTools","src","MDGraphAttr.jl"))
+include(joinpath(Pkg.dir(),"MetadataTools","src","GraphAlgos.jl"))    
     
 end  # module
