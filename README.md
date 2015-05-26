@@ -25,6 +25,11 @@ To test (Julia 0.4 required) :`cd test; julia test2.jl`.
 - allow the tool to check and display the relation between installed and 
   registered versions of packages
 - add documentation 
+----
+
+[![Build Status](https://travis-ci.org/IainNZ/MetadataTools.jl.svg?branch=master)](https://travis-ci.org/IainNZ/MetadataTools.jl)
+[![Coverage Status](https://coveralls.io/repos/IainNZ/MetadataTools.jl/badge.svg?branch=master)](https://coveralls.io/r/IainNZ/MetadataTools.jl?branc
+[![MetadataTools](http://pkg.julialang.org/badges/MetadataTools_release.svg)](http://pkg.julialang.org/?pkg=MetadataTools&ver=release)
 
 ----
 #ORIGINAL DOCUMENTATION
