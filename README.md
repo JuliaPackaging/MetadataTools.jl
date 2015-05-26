@@ -8,10 +8,23 @@ Functionality to analyze the structure of Julia's METADATA repository.
 
 This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.jl">original development</A>:
 - analysis of installed packages from `~/julia.d/vNN.MM/` directory
-- additional options when generating graphs in `dot` format
+- improved vertex display when generating graphs in `dot` format
 
-Example of generated graph: 
-<IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Quaternions.pdf">
+Examples of generated graphs: 
+<TABLE>
+<TR>
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Quaternions.jpg">
+<TD> 
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Romeo.jpg">
+</TABLE>
+
+To test (Julia 0.4 required) :`cd test; julia test2.jl`. 
+
+## TBD
+- test under Windows
+- allow the tool to check and display the relation between installed and 
+  registered versions of packages
+- add documentation 
 
 ----
 #ORIGINAL DOCUMENTATION
