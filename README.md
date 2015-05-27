@@ -12,10 +12,16 @@ This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.
 
 Examples of generated graphs: 
 <TABLE>
+<TR> Improved presentation of nodes showing highest tag value
 <TR>
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Quaternions.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp1_GLAbstraction.jpg">
 <TD> 
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/tp_Romeo.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp1_Cairo.jpg">
+<TR> Graph of installed packages (not necessarily registered)
+<TR>
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp2_Quaternions.jpg">
+<TD> 
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp2_Romeo.jpg">
 </TABLE>
 
 To test (Julia 0.4 required) :`cd test; julia test2.jl`. 

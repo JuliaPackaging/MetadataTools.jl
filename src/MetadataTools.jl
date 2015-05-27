@@ -69,7 +69,8 @@ end
 #######################################################################
 # get_pkg 
 #   Return a PkgMeta with all information about the package listed
-#   in METADATA, e.g.
+#   in METADATA, with .versions sorted by version number.
+#   e.g.
 #
 #   julia> get_pkg("DataFrames")
 #   DataFrames   git://github.com/JuliaStats/DataFrames.jl.git

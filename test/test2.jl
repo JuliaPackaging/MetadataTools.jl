@@ -1,3 +1,4 @@
+module test2
 # test additional functionality targeting installed packages 
 #
 
@@ -19,12 +20,16 @@ function versionToString(v::VersionNumber)
 end
 
 
-import Graphs.attributes 
-function Graphs.attributes{G<:AbstractGraph}(vtx::MetadataTools.PkgMeta,g::G)
+function graphAttrs{G<:AbstractGraph}(vtx::MetadataTools.PkgMeta,g::G)
      rd = Graphs.AttributeDict()
      rd["label"]=vtx.name * "\n" * versionToString(vtx.versions[1].ver)
      rd
 end
+
+import Main.graphAttrib
+@show Main.graphAttrib
+Main.graphAttrib.attributeFn  = graphAttrs
+
 
 # see if we may use the MetadataTools interface: 
 g= get_pkgs_dep_graph(pkgs)
@@ -32,7 +37,7 @@ println("Num vertices in full graph =", num_vertices(g))
 println("Num edges in full graph=", num_edges(g))
 
 
-plot(g)
+to_dot(g,"dotImgs/tp2_all.dot")
 
 gr= get_pkgs_dep_graph(pkgs; reverse=true)
 println("Num vertices in full graph (reverse)=", num_vertices(gr))
@@ -41,9 +46,17 @@ println("Num edges in full graph (reverse)=", num_edges(gr))
 #try the display interface 
 plot(gr)
 
-for (name,direction) in [("Quaternions",false) ("Romeo",true) ("Romeo",false)  ]
+for (name,direction) in [("Quaternions",false) ("GLAbstraction",false) ("Romeo",false)  ]
     println("\nOutput for package $name")
-    pk=pkgs[name]
+    pk = ()
+    try
+        pk=pkgs[name]
+    catch err
+        println("Error for pkg name $name:", err)
+        Base.show_backtrace( STDOUT, backtrace())
+        println("\n")
+        continue
+    end      
     println("name=", pk.name, "\turl=", pk.url,"\tlen(versions)=",length(pk.versions))
     
     for v in pk.versions
@@ -57,9 +70,12 @@ for (name,direction) in [("Quaternions",false) ("Romeo",true) ("Romeo",false)  ]
 
     # write a .dot to file to be processed by dot or neato
     rev = direction ? "_rev" :""
-    to_dot( sg, "tp_$(name)$(rev).dot")
+    to_dot( sg, "dotImgs/tp2_$(name)$(rev).dot")
     
     ul = get_upper_limit(pk)
     println("Upper limit name=", ul)
     println("End    for package $name\n+++ +++\n")
 end
+
+
+end # module test2
