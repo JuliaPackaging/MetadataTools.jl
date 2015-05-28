@@ -74,13 +74,17 @@ function getVersionsPM(vernum::VersionNumber,sha::String, dir)
              # use the most recent tag, if the sha does not coincide
              # add a prerelease indication "MODIFIED"
              if haskey(result,"object")
-                pmvPre = sha ==  result["object"] ? ("MOD",) : ()
-                pmvBld = (ASCIIString(result["object"][1:8]),)
+                pmvPre = sha !=  result["object"] ? ("MOD",) : ()
+                         #we need the 0x for the rare case where the SHA
+                         #starts with 8 digits, and does not qualify with version's
+                         #format in src/base/version.jl
+                pmvBld = ("0x" * ASCIIString(result["object"][1:8]),)
              else
                 pmvPre = ("NEW",)
                 pmvBld = Tuple{Vararg{ASCIIString}}(())
              end
-             vn = VersionNumber(0,0,0,pmvPre, pmvBld)
+             tagvn = VersionNumber(tag) #convert tag (string) to VersionNumber type
+             vn = VersionNumber(tagvn.major, tagvn.minor, tagvn.patch, pmvPre, pmvBld)
 
              #By extracting keys we ignore the version information in the 
              #output of getDependencies.
@@ -88,7 +92,8 @@ function getVersionsPM(vernum::VersionNumber,sha::String, dir)
              push!(versions, PkgMetaVersion(vn,sha,reqs))        
         end
         if length(versions) ==  0
-             sha1  = ASCIIString(sha)[1:8]
+                         # see remark above concerning 0x
+             sha1  = "0x" * ASCIIString(sha)[1:8]
              vn = VersionNumber(0,0,0,("NTAG",), (sha1,))
              push!(versions, PkgMetaVersion(vn,sha, Vector{ASCIIString}(0)))                    
         end
@@ -135,7 +140,8 @@ function pkgInstalledAsPkgMeta()
        urls     =  gitUrlsFromRemote(dir)
        comInfo  =  getCommitInfo(dir)
        versions =  getVersionsPM(v,comInfo["commit"],dir )
-
+       length(versions) > 1 && println("In  pkgInstalledAsPkgMeta, length version for $pkgn =",
+                              length(versions))
        gitDir   =  Pkg.Git.dir(dir)
        fix      =  true
 

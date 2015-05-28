@@ -7,24 +7,26 @@ Functionality to analyze the structure of Julia's METADATA repository.
 ## Added functionality
 
 This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.jl">original development</A>:
-- analysis of installed packages from `~/julia.d/vNN.MM/` directory
+- analysis of **installed packages** from `~/julia.d/vNN.MM/` directory
+- direct or reverse dependencies
 - improved vertex display when generating graphs in `dot` format
+- utility program to generate graphs  `src/MetaRegInfo.jl`
 
 Examples of generated graphs: 
 <TABLE>
-<TR> Improved presentation of nodes showing highest tag value
+<TR> <TD COLSPAN=2>Graph of registered packages
 <TR>
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp1_GLAbstraction.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1.jpg">
 <TD> 
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp1_Cairo.jpg">
-<TR> Graph of installed packages (not necessarily registered)
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1rev.jpg">
+<TR> <TD COLSPAN=2> Graph of installed packages (not necessarily registered)
 <TR>
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp2_Quaternions.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1.jpg">
 <TD> 
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/tp2_Romeo.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1rev.jpg">
 </TABLE>
 
-To test (Julia 0.4 required) :`cd test; julia test2.jl`. 
+To test (Julia 0.4 required) :`cd test; julia runtests.jl`. 
 
 ## TBD
 - test under Windows
@@ -64,6 +66,9 @@ Return a structure with all information about the package listed in METADATA, e.
 Walks through the METADATA folder, returns a vector of `PkgMeta`s
 for every package found.
 
+###  `pkgInstalledAsPkgMeta()`
+Uses the information in the `~/julia.d/vnn.mm` directory, returns a
+vector of of `PkgMeta`s, one entry for each package found.
 
 #### `get_upper_limit(pkg::PkgMeta)`
 Run through all versions of a package to try to determine if there
