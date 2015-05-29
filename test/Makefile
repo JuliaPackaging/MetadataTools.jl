@@ -25,7 +25,7 @@ JPGTARGETS= dotImgs/tp1_Cairo.jpg  \
            dotImgs/tp2_Quaternions.jpg  \
            dotImgs/tp2_Romeo.jpg
 
-.PHONY: all jpgs pdfs testCmd
+.PHONY: all jpgs pdfs testCmd testCmd1 testCmd2 
 
 jpgs:  $(JPGTARGETS)
 
@@ -44,7 +44,33 @@ testCmd1:
 testCmd2: dotImgs/A1.jpg dotImgs/A1rev.jpg dotImgs/B1.jpg dotImgs/B1rev.jpg \
           dotImgs/C1.jpg dotImgs/C1rev.jpg dotImgs/C2.jpg dotImgs/C2rev.jpg 
 
-testCmd: testCmd1 testCmd2
+.PHONY: testCmd3 testCmd4
+testCmd3:
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/P1.dot --pivot --pkg=Cairo
+	Julia4 ../src/MetaRegInfo.jl -i --dot dotImgs/P2.dot --pivot --pkg=Cairo
+
+testCmd4: dotImgs/P1.jpg dotImgs/P2.jpg
+
+
+testCmd: testCmd1 testCmd2 testCmd3 testCmd4
 
 all : jpgs pdfs testCmd
+
+.PHONY: test3 test4
+
+test3:
+	Julia4 test3.jl 
+	ddot dotImgs/T1merge.dot 
+	tojpg dotImgs/T1merge.pdf 
+	display dotImgs/T1merge.jpg 
+	ddot dotImgs/T2merge.dot 
+	tojpg dotImgs/T2merge.pdf 
+	display dotImgs/T2merge.jpg 
+
+
+test4:
+	Julia4 test4.jl 
+	ddot dotImgs/T4merge.dot 
+	tojpg dotImgs/T4merge.pdf 
+	display dotImgs/T4merge.jpg
 

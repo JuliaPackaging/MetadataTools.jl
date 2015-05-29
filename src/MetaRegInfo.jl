@@ -9,12 +9,17 @@
 # Licensed under the MIT License
 ######################################################################
 
+##   Command line interface to building .dot graphs for packages
+##   Enter: Julia MetaRegInfo --help
+##   for more details
+
 module MetaRegInfo
 
 using MetadataTools
 using MetadataTools.GraphAttr
-using Graphs
 using MetadataTools.installedPkgStatus
+using MetadataTools.GraphAlgos
+using Graphs
 
 export main
 
@@ -71,12 +76,12 @@ function safe_get_pkg_dep_graph(pkgn::String,pkgs, g)
 end
 
 function real_main(pkgn::Union(Void,String),
-                   direction::Bool,
+                   reversed::Bool,
                    dotFileName::Union(Void,String),
                    installed::Bool)
     
    allPkgs = installed ? pkgInstalledAsPkgMeta() : get_all_pkg()
-   allGraph =  get_pkgs_dep_graph(allPkgs; reverse=direction)
+   allGraph =  get_pkgs_dep_graph(allPkgs; reverse=reversed)
    g = pkgn==nothing?
                 allGraph :
                 safe_get_pkg_dep_graph(pkgn,allPkgs, allGraph)
@@ -85,7 +90,55 @@ function real_main(pkgn::Union(Void,String),
    println("Num edges=", num_edges(g))
 
    # write a .dot to file to be processed by dot or neato
-    to_dot( g,dotFileName)
+    to_dot( reversed ? reverseArrows(g): g,dotFileName)
+end
+
+# merges 2 graphs one from registered, one from installed
+function real_main_mergeRI(pkgn::Union(Void,String),
+                   reversed::Bool,
+                   dotFileName::Union(Void,String))
+   error("real_main_mergeRI : TBD!!")
+   allPkgsIns = pkgInstalledAsPkgMeta()
+   allPkgsReg =  get_all_pkg()
+   allGraphIns =  get_pkgs_dep_graph(allPkgsIns; reverse=reversed)
+   allGraphReg =  get_pkgs_dep_graph(allPkgsReg; reverse=reversed)
+
+   gIns = pkgn==nothing?
+                allGraphIns :
+                safe_get_pkg_dep_graph(pkgn,allPkgsIns, allGraphIns)
+   gReg = pkgn==nothing?
+                allGraphReg :
+                safe_get_pkg_dep_graph(pkgn,allPkgsReg, allGraphReg)
+   (gIns == nothing || gReg == nothing )&& exit(1)
+
+    println("Num vertices=", num_vertices(gIns), num_vertices(gReg))
+    println("Num edges=", num_edges(gIns),num_edges(gReg) )
+
+   # write a .dot to file to be processed by dot or neato
+   # to_dot( reversed ? reverseArrows(g): g,dotFileName)
+end
+
+# merges 2 graphs giving 2 views with same package as pivot
+function real_main_mergePivot(pkgn::Union(Void,String),
+                   dotFileName::Union(Void,String),
+                   installed::Bool)
+    
+   allPkgs = installed ? pkgInstalledAsPkgMeta() :  get_all_pkg()
+   pk= allPkgs[pkgn]
+    
+   g = get_pkgs_dep_graph(allPkgs)
+   sg = get_pkg_dep_graph(pk, g)
+
+   gr = get_pkgs_dep_graph(allPkgs; reverse=true)
+   sgr = reverseArrows(get_pkg_dep_graph(pk, gr))
+
+   mg =  GraphAlgos.merge(sg,sgr)
+   mg == nothing && exit(1)
+
+   println("Num vertices=", num_vertices(mg))
+   println("Num edges=", num_edges(mg))
+
+   to_dot( mg, dotFileName)
 end
 
 
@@ -100,6 +153,12 @@ function main(args)
       "--rev"
                help="Reverse graph arrows"
                 action = :store_true
+      "--pivot"
+               help="Merge direct and reverse graphs, --pkg required"
+               action = :store_true
+      "--both"
+               help="Merge registered and installed packages"
+               action = :store_true
       "--dot"
                help="Specify dot file name (output)"
                arg_type = String
@@ -109,6 +168,15 @@ function main(args)
      end    
 
      s.epilog = """
+          The program builds a dot file for packages installed or registered.
+          When --pkg is specified, the graph is limited on dependencies for the
+                     given package.
+          When --rev is used, dependencies are reversed: packages depending on
+                     the given package are included.
+          When --pivot --pkg=...  is used reverse and direct dependencies are merged
+          When --both  is used ,the registered and installed views are merged (excludes
+               --pivot
+
           Node legends:
             for installed packages:
                   MOD   : the package has been modified since it was tag (by some commits) 
@@ -121,7 +189,14 @@ function main(args)
     rev = parsed_args["rev"]
     dotFilename =  parsed_args["dot"]
     installed = parsed_args["installed"]
-    real_main( pkgname, rev, dotFilename, installed )
+
+    if parsed_args["pivot"]
+        real_main_mergePivot( pkgname, dotFilename, installed )
+    elseif parsed_args["both"]
+        real_main_mergeRI( pkgname, rev, dotFilename)
+    else
+        real_main( pkgname, rev, dotFilename, installed )
+    end    
 end
 
 end # module MetaRegInfo

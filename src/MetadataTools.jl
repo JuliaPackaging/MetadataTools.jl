@@ -346,6 +346,7 @@ function get_pkg_dep_graph(pkg::PkgMeta, dep_graph::PkgGraph)
 end
 
 include(joinpath(Pkg.dir(),"MetadataTools","src","installedPkgStatus.jl"))
-include(joinpath(Pkg.dir(),"MetadataTools","src","MDGraphAttr.jl"))    
+include(joinpath(Pkg.dir(),"MetadataTools","src","MDGraphAttr.jl"))
+include(joinpath(Pkg.dir(),"MetadataTools","src","GraphAlgos.jl"))    
     
 end  # module

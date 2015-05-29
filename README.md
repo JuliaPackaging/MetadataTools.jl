@@ -16,14 +16,19 @@ Examples of generated graphs:
 <TABLE>
 <TR> <TD COLSPAN=2>Graph of registered packages
 <TR>
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1.jpg" width="40%">
 <TD> 
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1rev.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1rev.jpg" width="40%" >
 <TR> <TD COLSPAN=2> Graph of installed packages (not necessarily registered)
 <TR>
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1.jpg"  width="40%">
 <TD> 
-   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1rev.jpg">
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1rev.jpg"  width="40%">
+<TR> <TD COLSPAN=2> Merged graphs: direct and reverse dependencies of a package
+<TR>
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/P1.jpg"  width="40%" >
+<TD> 
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/P2.jpg" width="40%" >
 </TABLE>
 
 To test (Julia 0.4 required) :`cd test; julia runtests.jl`. 

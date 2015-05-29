@@ -16,6 +16,7 @@ module test2
 using MetadataTools
 using MetadataTools.installedPkgStatus
 using MetadataTools.GraphAttr
+using MetadataTools.GraphAlgos
 using Graphs
 
 pkgs = pkgInstalledAsPkgMeta()
@@ -95,7 +96,7 @@ for (name,direction) in [("Quaternions",false) ("GLAbstraction",false) ("Romeo",
 
     # write a .dot to file to be processed by dot or neato
     rev = direction ? "_rev" :""
-    to_dot( sg, "dotImgs/tp2_$(name)$(rev).dot")
+    to_dot( direction? reverseArrows(sg): sg, "dotImgs/tp2_$(name)$(rev).dot")
     
     ul = get_upper_limit(pk)
     println("Upper limit name=", ul)

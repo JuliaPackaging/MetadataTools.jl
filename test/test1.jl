@@ -12,6 +12,7 @@
 module test1
 using MetadataTools
 using MetadataTools.GraphAttr
+using MetadataTools.GraphAlgos
 using Graphs
 
 
@@ -80,7 +81,7 @@ for (name,direction) in [("Cairo", false) ("Cairo", true)
 
        # write a .dot to file to be processed by dot or neato
        rev = direction  ? "_rev" :""
-       to_dot( sg, "dotImgs/tp1_$(name)$(rev).dot")
+       to_dot( direction? reverseArrows(sg): sg, "dotImgs/tp1_$(name)$(rev).dot")
     catch err
         println("Error for pkg name $name:", err)
         Base.show_backtrace( STDOUT, backtrace())
