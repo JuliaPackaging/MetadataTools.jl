@@ -44,32 +44,37 @@ testCmd1:
 testCmd2: dotImgs/A1.jpg dotImgs/A1rev.jpg dotImgs/B1.jpg dotImgs/B1rev.jpg \
           dotImgs/C1.jpg dotImgs/C1rev.jpg dotImgs/C2.jpg dotImgs/C2rev.jpg 
 
-.PHONY: testCmd3 testCmd4
+.PHONY: testCmd3 testCmd4  testCmd5 testCmd5b testCmd6
 testCmd3:
 	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/P1.dot --pivot --pkg=Cairo
 	Julia4 ../src/MetaRegInfo.jl -i --dot dotImgs/P2.dot --pivot --pkg=Cairo
 
 testCmd4: dotImgs/P1.jpg dotImgs/P2.jpg
 
+testCmd5:
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/MA.dot  --both
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M1.dot --pivot --both --pkg=Cairo
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M2.dot --both --pkg=Cairo
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M3.dot --both --rev --pkg=Cairo
+
+
+testCmd6: dotImgs/M1.jpg dotImgs/M2.jpg dotImgs/M3.jpg dotImgs/MA.jpg
+
 
 testCmd: testCmd1 testCmd2 testCmd3 testCmd4
 
-all : jpgs pdfs testCmd
+all : runtests jpgs pdfs testCmd
 
-.PHONY: test3 test4
+.PHONY:  runtests
 
-test3:
-	Julia4 test3.jl 
+runtests:
+	Julia4 runtests.jl
 	ddot dotImgs/T1merge.dot 
 	tojpg dotImgs/T1merge.pdf 
 	display dotImgs/T1merge.jpg 
 	ddot dotImgs/T2merge.dot 
 	tojpg dotImgs/T2merge.pdf 
 	display dotImgs/T2merge.jpg 
-
-
-test4:
-	Julia4 test4.jl 
 	ddot dotImgs/T4merge.dot 
 	tojpg dotImgs/T4merge.pdf 
 	display dotImgs/T4merge.jpg

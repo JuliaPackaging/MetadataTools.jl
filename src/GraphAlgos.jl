@@ -85,7 +85,7 @@ end
          for edges : the set one edge between to vertices if such exists in either of the
          input graphs.
 """ ->
-function GraphAlgos.merge{G<:AbstractGraph}(g1::G, g2::G)
+function GraphAlgos.merge{G<:AbstractGraph}(g1::G, g2::G; resolveProc::Union(Void,Function)=nothing)
      is_directed(g1) == is_directed(g2) || error("mix of directedness!!")
 
     #==  Algorithm:        
@@ -103,29 +103,36 @@ function GraphAlgos.merge{G<:AbstractGraph}(g1::G, g2::G)
                         is_directed = is_directed(g1))
 
      ## this dict is used to check that we are not introducing semantically
-     ## equal vertices (isequal)
-     vertexDict = Dict{Any,Bool}()
+     ## equal vertices (isequal). We note the vertex of g, so that we may
+     ## get it back for conflict resolution (Remember sem. equality is not
+     ## structural equality used by Graphs.jl !!)
+     vertexDict = Dict{Any,Any}()
      for v in vertices(g)
-         vertexDict[value_single(v)]=true
+         vertexDict[value_single(v)]=v
      end
+     # make a fast accessible structure indicating the existence of edges in g
+     edgeDict = Dict{Tuple{Any,Any},Bool}()
+
      ## introduce new vertices when not equal; in some applications, just
      ## dropping is not sufficient ( or might be inadequate ).
      for v in vertices(g2)
-         if !haskey(vertexDict,value_single(v))
+         vsv = value_single(v)
+         if !haskey(vertexDict,vsv)
              add_vertex!(g,v)
-             vertexDict[value_single(v)]=true
+             vertexDict[vsv]=v
+         elseif resolveProc != nothing 
+             if resolveProc(vertexDict[vsv],v)
+                 add_vertex!(g,v)
+                 e = add_edge!(g,vertexDict[vsv],v)
+                 # apparently, to display edge color, we would need to use graphs
+                 # with ExEdge (might disrupt this package, maybe try in a git branch
+                 vertexDict[vsv] = v
+                 edgeDict[ value_pair(e,g) ] = true
+             end
          end
      end
 
-    # Debug:check that all vertices are indeed distinct
-      snames =  sort(map( x-> x.name, vertices(g)))
-      for i in 1:(length(snames)-1)
-          @assert snames[i] != snames[i+1]
-      end
-                 
      # now, all vertices have unique index in g
-     # make a fast accessible structure indicating the existence of edges in g
-     edgeDict = Dict{Tuple{Any,Any},Bool}()
      for e in edges(g)
          edgeDict[value_pair(e,g)] = true
      end
@@ -133,7 +140,9 @@ function GraphAlgos.merge{G<:AbstractGraph}(g1::G, g2::G)
      for e in edges(g2)
          vp = value_pair(e,g2)
          if !haskey(edgeDict, vp)
-            add_edge!(g,source(e,g2),target(e,g2))
+            vsource = vertexDict[value_single(source(e,g2))]
+            vtarget = vertexDict[value_single(target(e,g2))]
+            add_edge!(g,vsource,vtarget)
             edgeDict[vp] = true
          end
      end

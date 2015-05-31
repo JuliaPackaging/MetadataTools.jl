@@ -1,4 +1,4 @@
-
+module test3
 using MetadataTools
 using MetadataTools.GraphAttr
 using MetadataTools.GraphAlgos
@@ -25,3 +25,4 @@ sgr2 = reverseArrows(get_pkg_dep_graph(pk, gr))
 println("\n+++++SECOND MERGE")
 mg2= GraphAlgos.merge(mg,sgr2)
 to_dot(mg2,"dotImgs/T2merge.dot")
+end # module test3

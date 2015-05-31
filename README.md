@@ -9,34 +9,39 @@ Functionality to analyze the structure of Julia's METADATA repository.
 This adds the following to the <A HREF="https://github.com/IainNZ/MetadataTools.jl">original development</A>:
 - analysis of **installed packages** from `~/julia.d/vNN.MM/` directory
 - direct or reverse dependencies
+- merging views: **installed** and **registered**, **forward and reverse 
+  dependencies**
 - improved vertex display when generating graphs in `dot` format
 - utility program to generate graphs  `src/MetaRegInfo.jl`
 
 Examples of generated graphs: 
 <TABLE>
 <TR> <TD COLSPAN=2>Graph of registered packages
-<TR>
+<TR> <TD>
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1.jpg" width="40%">
 <TD> 
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/A1rev.jpg" width="40%" >
 <TR> <TD COLSPAN=2> Graph of installed packages (not necessarily registered)
-<TR>
+<TR> <TD>
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1.jpg"  width="40%">
 <TD> 
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/B1rev.jpg"  width="40%">
 <TR> <TD COLSPAN=2> Merged graphs: direct and reverse dependencies of a package
-<TR>
+<TR> <TD>
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/P1.jpg"  width="40%" >
 <TD> 
    <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/P2.jpg" width="40%" >
+<TR> <TD COLSPAN=2> Merged graphs: registered and installed views of a package
+<TR> <TD>
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/M1.jpg"  width="40%" >
+<TD> 
+   <IMG SRC="https://github.com/AlainLich/MetadataTools.jl/blob/supportInstalled/test/dotImgs/T4merge.jpg" width="40%" >
 </TABLE>
 
 To test (Julia 0.4 required) :`cd test; julia runtests.jl`. 
 
 ## TBD
 - test under Windows
-- allow the tool to check and display the relation between installed and 
-  registered versions of packages
 - add documentation 
 ----
 

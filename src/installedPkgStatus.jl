@@ -32,6 +32,11 @@ function gitUrlsFromRemote(dir)
      #   make sense of it?
 end
 
+function localUrls(dir)
+     #for compatibility with gitUrlsFromRemote, return a weird format
+     ((dir,"git://localhost$dir"),)
+end
+
 const  rxTag = Base.compile( 
    r"^                                  # start
 (([[:alpha:]]+)\s+([[:alnum:]\.]+)     # keyword  hex-sha
@@ -137,7 +142,7 @@ function pkgInstalledAsPkgMeta()
     for pkgn in pkgINames
        v        =  pkgInstalled[pkgn]        # get the version number installed
        dir      =  joinpath(Pkg.dir(),pkgn)
-       urls     =  gitUrlsFromRemote(dir)
+       urls     =  localUrls(dir)
        comInfo  =  getCommitInfo(dir)
        versions =  getVersionsPM(v,comInfo["commit"],dir )
        length(versions) > 1 && println("In  pkgInstalledAsPkgMeta, length version for $pkgn =",
