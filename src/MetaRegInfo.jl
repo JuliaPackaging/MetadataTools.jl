@@ -109,15 +109,20 @@ function mergeConflict( regvx::MetadataTools.PkgMeta,
 end
 
 
-function safe_get_pkg_dep_graph(pkgn::String,pkgs, g)
+function safe_get_pkg_dep_graph(pkgn::String,pkgs, g, installed::Bool = false)
     try
        pk=pkgs[pkgn]
-       return get_pkg_dep_graph(pk, g)
+       return ( installed ? get_pkg_dep_graph_inst(pk, g) : get_pkg_dep_graph(pk, g))
     catch err
         println("Error for pkg name $pkgn:", err)
         Base.show_backtrace( STDOUT, backtrace())
         println("\n")
     end
+end
+
+function graphSize(legend::String,g)
+         println("In $legend,vertices=", num_vertices(g),
+                           "\tedges =", num_edges(g))
 end
 
 function real_main(pkgn::Union(Void,String),
@@ -126,13 +131,14 @@ function real_main(pkgn::Union(Void,String),
                    installed::Bool)
     
    allPkgs = installed ? pkgInstalledAsPkgMeta() : get_all_pkg()
-   allGraph =  get_pkgs_dep_graph(allPkgs; reverse=reversed)
+   allGraph = installed ?
+             get_pkgs_dep_graph_inst(allPkgs; reverse=reversed) :
+             get_pkgs_dep_graph(allPkgs; reverse=reversed)
    g = pkgn==nothing?
                 allGraph :
-                safe_get_pkg_dep_graph(pkgn,allPkgs, allGraph)
+                safe_get_pkg_dep_graph(pkgn,allPkgs, allGraph,installed)
    g == nothing && exit(1)
-   println("Num vertices=", num_vertices(g))
-   println("Num edges=", num_edges(g))
+   graphSize("dep graph",g)
 
    # write a .dot to file to be processed by dot or neato
     to_dot( reversed ? reverseArrows(g): g,dotFileName)
@@ -145,15 +151,20 @@ function real_main_mergeRI(pkgn::Union(Void,String),
          pkgs = get_all_pkg()
          pkgsI =  pkgInstalledAsPkgMeta()
          allGraph  =  get_pkgs_dep_graph(pkgs; reverse=reversed)
-         allGraphI =  get_pkgs_dep_graph(pkgsI; reverse=reversed)
+         allGraphI =  get_pkgs_dep_graph_inst(pkgsI; reverse=reversed)
          g = pkgn==nothing?
                 allGraph :
                 safe_get_pkg_dep_graph(pkgn,pkgs, allGraph)
          gI = pkgn==nothing?
                 allGraphI :
-                safe_get_pkg_dep_graph(pkgn,pkgsI, allGraphI)
+                safe_get_pkg_dep_graph(pkgn,pkgsI, allGraphI,true)
     
          mg  = GraphAlgos.merge(g,gI; resolveProc=mergeConflict)
+
+         graphSize("Registered graph",g)
+         graphSize("Installed graph",gI)
+         graphSize("Merged graph",mg)
+
          to_dot( reversed ? reverseArrows(mg) : mg,  dotFileName)
 end
 
@@ -173,13 +184,18 @@ function real_main_mergePRI(pkgn::Union(Void,String),
     sgr =  reverseArrows(get_pkg_dep_graph(pk, gr))
     mg  = GraphAlgos.merge(sg,sgr)
 
-    gI = get_pkgs_dep_graph(pkgsI)
-    sgI = get_pkg_dep_graph(pkI, gI)
-    grI = get_pkgs_dep_graph(pkgsI;reverse=true)
-    sgrI = reverseArrows(get_pkg_dep_graph(pkI, grI))
+    gI = get_pkgs_dep_graph_inst(pkgsI)
+    sgI = get_pkg_dep_graph_inst(pkI, gI)
+    grI = get_pkgs_dep_graph_inst(pkgsI;reverse=true)
+    sgrI = reverseArrows(get_pkg_dep_graph_inst(pkI, grI))
     mgI  = GraphAlgos.merge(sgI,sgrI)
 
     fing =  GraphAlgos.merge(mg, mgI; resolveProc=mergeConflict)
+
+    graphSize("Registered merged graph",mg)
+    graphSize("Installed merged graph",mgI)
+    graphSize("Merged graph",fing)
+   
     to_dot(fing,dotFileName)
 end
 
@@ -191,18 +207,21 @@ function real_main_mergePivot(pkgn::Union(Void,String),
     
    allPkgs = installed ? pkgInstalledAsPkgMeta() :  get_all_pkg()
    pk= allPkgs[pkgn]
-    
-   g = get_pkgs_dep_graph(allPkgs)
+
+   getPkgsDepFun = installed ? get_pkgs_dep_graph_inst : get_pkgs_dep_graph
+   getPkgDepFun  = installed ? get_pkg_dep_graph_inst  : get_pkg_dep_graph
+   g =  getPkgsDepFun(allPkgs)
    sg = get_pkg_dep_graph(pk, g)
 
-   gr = get_pkgs_dep_graph(allPkgs; reverse=true)
+   gr =  getPkgsDepFun(allPkgs; reverse=true)
    sgr = reverseArrows(get_pkg_dep_graph(pk, gr))
 
    mg =  GraphAlgos.merge(sg,sgr)
    mg == nothing && exit(1)
 
-   println("Num vertices=", num_vertices(mg))
-   println("Num edges=", num_edges(mg))
+   graphSize("Direct dep.graph ",sg)
+   graphSize("Reversed dep. graph",sgr)
+   graphSize("Merged graph",mg)
 
    to_dot( mg, dotFileName)
 end
@@ -235,19 +254,27 @@ function main(args)
 
      s.epilog = """
           The program builds a dot file for packages installed or registered.
+
           When --pkg is specified, the graph is limited on dependencies for the
                      given package.
+
           When --rev is used, dependencies are reversed: packages depending on
                      the given package are included.
+
           When --pivot --pkg=...  is used reverse and direct dependencies are merged
+
           When --both  is used ,the registered and installed views are merged
 
           Node legends:
             for installed packages:
-                  MOD   : the package has been modified since it was tag (by some commits) 
-                  NTAG  : no tag available (showing commit id)
-                  DIRTY : TBD (we do not recognize dirty packages)
-            --both and --pivot may be used together
+
+         \tMOD   : the package has been modified since it was tag (by some commits) 
+
+         \tNTAG  : no tag available (showing commit id)
+
+         \tDIRTY : TBD (we do not recognize dirty packages)
+
+         --both and --pivot may be used together
     """
     parsed_args = parse_args(s) # the result is a Dict{String,Any}
 
@@ -256,7 +283,14 @@ function main(args)
     dotFilename =  parsed_args["dot"]
     installed = parsed_args["installed"]
 
+    # check consistency of args
+
     if parsed_args["pivot"]
+        pkgname == nothing && (
+                               println("--pivot requires --pkg"),
+                               ArgParse.show_help(STDERR,s) ,
+                               exit(2)
+                               )
         if parsed_args["both"]
            real_main_mergePRI( pkgname, dotFilename)
         else

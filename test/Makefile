@@ -56,9 +56,10 @@ testCmd5:
 	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M1.dot --pivot --both --pkg=Cairo
 	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M2.dot --both --pkg=Cairo
 	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/M3.dot --both --rev --pkg=Cairo
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/Md2.dot -i --pivot --both --pkg=MetadataTools
 
 
-testCmd6: dotImgs/M1.jpg dotImgs/M2.jpg dotImgs/M3.jpg dotImgs/MA.jpg
+testCmd6: dotImgs/M1.jpg dotImgs/M2.jpg dotImgs/M3.jpg dotImgs/MA.jpg  dotImgs/Md2.jpg
 
 
 testCmd: testCmd1 testCmd2 testCmd3 testCmd4
@@ -79,3 +80,12 @@ runtests:
 	tojpg dotImgs/T4merge.pdf 
 	display dotImgs/T4merge.jpg
 
+.PHONY: testRomeo testRomeoG
+
+testRomeo:
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/Rom1.dot -i --pivot --pkg=GLVisualize
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/Rom2.dot -i --pivot --pkg=Romeo
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/Rom3.dot -i 
+	Julia4 ../src/MetaRegInfo.jl --dot dotImgs/Rom4.dot -i --rev
+
+testRomeoG: dotImgs/Rom1.jpg dotImgs/Rom2.jpg  dotImgs/Rom3.jpg dotImgs/Rom4.jpg 
