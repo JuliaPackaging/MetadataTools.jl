@@ -1,4 +1,6 @@
-julia 0.3
+julia 0.4-
 JSON
 Requests
-Graphs
+Graphs 0.5.4  #need commit  c20fb2454d9
+Compat
+ArgParse

@@ -8,6 +8,7 @@
 module MetadataTools
 
 import Requests, JSON, Graphs
+using Compat
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
 export get_pkgs_dep_graph, get_pkg_dep_graph
@@ -62,13 +63,14 @@ immutable PkgInfo
     homepage::String
     stars::Int
     watchers::Int
-    contributors::Vector{(Int,Contributor)}  # (commit_count,Contrib.)
+    contributors::Vector{@compat Tuple{Int,Contributor}}  # (commit_count,Contrib.)
 end
 
 #######################################################################
 # get_pkg 
 #   Return a PkgMeta with all information about the package listed
-#   in METADATA, e.g.
+#   in METADATA, with .versions sorted by version number.
+#   e.g.
 #
 #   julia> get_pkg("DataFrames")
 #   DataFrames   git://github.com/JuliaStats/DataFrames.jl.git
@@ -341,4 +343,8 @@ function get_pkg_dep_graph(pkg::PkgMeta, dep_graph::PkgGraph)
     return v.sub_graph
 end
 
+include(joinpath(Pkg.dir(),"MetadataTools","src","installedPkgStatus.jl"))
+include(joinpath(Pkg.dir(),"MetadataTools","src","MDGraphAttr.jl"))
+include(joinpath(Pkg.dir(),"MetadataTools","src","GraphAlgos.jl"))    
+    
 end  # module
