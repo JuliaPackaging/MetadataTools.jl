@@ -137,12 +137,10 @@ function get_pkg_dep_graph(pkgname::String, depgraph::PkgGraph)
     # Construct the vistor
     vis = SubgraphVisitor(depgraph)
     # Walk the graph starting from the package in question
-    @show test_cyclic_by_dfs(depgraph.g)
     traverse_graph(depgraph.g, LightGraphs.DepthFirst(),
                     depgraph.p_to_i[pkgname], vis)
     # The new graph will have vertices in a new index scheme
-    p_to_i = Dict()
-    i_to_p = Dict()
+    p_to_i, i_to_p = Dict(), Dict()
     for (p, i) in depgraph.p_to_i
         if i in keys(vis.old_i_to_new_i)
             # This vertex is in the final graph
