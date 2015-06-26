@@ -19,6 +19,11 @@ type PkgGraph
     i_to_p::Dict  # Internal index to package name
 end
 
+# numpackages
+# PkgGraph -> Int
+# Get number of packages in graph
+numpackages(pg::PkgGraph) = pg.num_p
+
 # packagenames
 # PkgGraph -> Vector{String}
 # Extract the vector of package names from the graph
@@ -96,9 +101,10 @@ type SubgraphVisitor <: LightGraphs.AbstractGraphVisitor
     num_v
     old_i_to_new_i
     new_graph
+    cyclewarn
 end
-SubgraphVisitor(depgraph) =
-    SubgraphVisitor(depgraph, 0, Dict(), DiGraph(depgraph.num_p))
+SubgraphVisitor(depgraph,cyclewarn) =
+    SubgraphVisitor(depgraph, 0, Dict(), DiGraph(depgraph.num_p), cyclewarn)
 
 function LightGraphs.discover_vertex!(vis::SubgraphVisitor, v)
     # Give vertex v a new index, if it doesn't have one yet
@@ -114,6 +120,7 @@ function LightGraphs.examine_neighbor!(vis::SubgraphVisitor,
     # Have we visited this vertex before, but we didn't get there
     # from here? Then we have a cycle
     if vcolor == 1 && ecolor == 0
+        vis.cyclewarn &&
         println("MetadataTools dropped an edge in dependency",
                 " graph due to it creating a cycle (",
                 vis.old_depgraph.i_to_p[u],",",
@@ -133,9 +140,9 @@ function LightGraphs.examine_neighbor!(vis::SubgraphVisitor,
 end
 
 get_pkg_dep_graph(pkg::PkgMeta, depgraph::PkgGraph) = get_pkg_dep_graph(pkg.name, depgraph)
-function get_pkg_dep_graph(pkgname::String, depgraph::PkgGraph)
+function get_pkg_dep_graph(pkgname::String, depgraph::PkgGraph; cyclewarn=true)
     # Construct the vistor
-    vis = SubgraphVisitor(depgraph)
+    vis = SubgraphVisitor(depgraph,cyclewarn)
     # Walk the graph starting from the package in question
     traverse_graph(depgraph.g, LightGraphs.DepthFirst(),
                     depgraph.p_to_i[pkgname], vis)
