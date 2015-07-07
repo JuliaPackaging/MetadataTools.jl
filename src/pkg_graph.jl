@@ -87,6 +87,15 @@ function make_dep_graph(pkgs::PkgMetaDict; reverse=false)
         end
     end
 
+    # Break the cycle
+    libcurl = p_to_i["LibCURL"]
+    winrpm  = p_to_i["WinRPM"]
+    if reverse
+        rem_edge!(g,winrpm,libcurl)
+    else
+        rem_edge!(g,libcurl,winrpm)
+    end
+
     return PkgGraph(g, nv(g), p_to_i, i_to_p)
 end
 
@@ -96,7 +105,7 @@ end
 # Get the dep. graph for a single package by running a traversal on
 # the full dep. graph starting from the desired package. Uses a
 # LightGraphs.jl visitor, we pass that into the traversal algorithm
-type SubgraphVisitor <: LightGraphs.AbstractGraphVisitor
+type SubgraphVisitor <: LightGraphs.SimpleGraphVisitor
     old_depgraph
     num_v
     old_i_to_new_i
@@ -117,16 +126,6 @@ end
 function LightGraphs.examine_neighbor!(vis::SubgraphVisitor,
                                         u, v,
                                         vcolor::Int, ecolor::Int)
-    # Have we visited this vertex before, but we didn't get there
-    # from here? Then we have a cycle
-    if vcolor == 1 && ecolor == 0
-        vis.cyclewarn &&
-        println("MetadataTools dropped an edge in dependency",
-                " graph due to it creating a cycle (",
-                vis.old_depgraph.i_to_p[u],",",
-                vis.old_depgraph.i_to_p[v],")")
-        return
-    end
     # Make sure we have indices for the neighbour
     if v ∉ keys(vis.old_i_to_new_i)
         vis.num_v += 1
