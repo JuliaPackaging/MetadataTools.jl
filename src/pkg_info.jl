@@ -21,7 +21,7 @@ function retry_get(url; max_attempts=3, sleep_time=0.5)
     response = nothing
     while response == nothing
         try
-            response = Requests.get(url).data
+            response = Requests.text(Requests.get(url))
         catch
             failures += 1
             sleep(sleep_time)
@@ -92,7 +92,7 @@ function get_pkg_info_github(pkg_url::String; token=nothing)
         get(req1, "homepage", "No homepage available."),
         get(req1, "stargazers_count", -1),
         get(req1, "subscribers_count", -1),
-        (Int,Contributor)[]
+        (@compat Tuple{Int,Contributor})[]
         #(
         #    con["total"], 
         #    Contributor(con["author"]["login"],con["author"]["html_url"]))
