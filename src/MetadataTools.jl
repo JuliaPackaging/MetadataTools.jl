@@ -8,6 +8,7 @@
 module MetadataTools
 
 import Requests, JSON
+import Base: ==, isequal, print, show
 using Compat
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
@@ -25,7 +26,7 @@ immutable PkgMeta
     url::String
     versions::Vector{PkgMetaVersion}
 end
-Base.isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
+isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
 (==)(a::PkgMeta, b::PkgMeta) = isequal(a,b)
 
 typealias PkgMetaDict Dict{String,PkgMeta}
@@ -34,8 +35,6 @@ function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
     map(r->print(io, ",",r), pmv.requires)
 end
-Base.print(io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
-Base.show(io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
 
 function printer(io::IO, pm::PkgMeta)
     println(io, pm.name, "   ", pm.url)
@@ -46,8 +45,8 @@ function printer(io::IO, pm::PkgMeta)
         print(io, pm.versions[end])
     end
 end
-Base.print(io::IO, pm::PkgMeta) = printer(io,pm)
-Base.show(io::IO, pm::PkgMeta) = printer(io,pm)
+print(io::IO, pm::Union{PkgMeta, PkgMetaVersion}) = printer(io, pm)
+show(io::IO, pm::Union{PkgMeta, PkgMetaVersion}) = printer(io, pm)
 
 
 #######################################################################
