@@ -1,65 +1,83 @@
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 # MetadataTools
 # https://github.com/IainNZ/MetadataTools.jl
-# (c) Iain Dunning 2015
+#-----------------------------------------------------------------------
+# Copyright (c) 2015: Iain Dunning
 # Licensed under the MIT License
-#----------------------------------------------------------------------
-# pkg_graph.jl
+#-----------------------------------------------------------------------
+# src/pkg_graph.jl
 # Converts METADATA to a graph and provides some operations on that
 # graph such as extracting [reverse] dependency graphs for a package.
 #----------------------------------------------------------------------
+
 export make_dep_graph, get_pkg_dep_graph
 
 using LightGraphs
 
+"""
+    PkgGraph
+
+A lightweight wrapper around a LightGraphs.jl representation of a
+package dependency graph.
+"""
 type PkgGraph
     g::DiGraph
-    num_p::Int    # True number of packages, possibly != nv(g)
-    p_to_i::Dict  # Package names to an internal index
-    i_to_p::Dict  # Internal index to package name
+    num_pkg::Int  # True number of packages, possibly != nv(g)
+    p_to_i::Dict{UTF8String,Int}  # Package names to an internal index
+    i_to_p::Dict{Int,UTF8String}  # Internal index to package name
 end
 
-# numpackages
-# PkgGraph -> Int
-# Get number of packages in graph
-numpackages(pg::PkgGraph) = pg.num_p
+"""
+    numpackages(pg::PkgGraph)
 
-# packagenames
-# PkgGraph -> Vector{String}
-# Extract the vector of package names from the graph
-packages(pg::PkgGraph) = [pg.i_to_p[k] for k in 1:pg.num_p]
+Returns the number of packages in a package dependency graph.
+"""
+numpackages(pg::PkgGraph) = pg.num_pkg
 
-# adjlist
-# PkgGraph -> Vector{Vector{Int}}
-# Convert the graph to adjacency list format
+"""
+    packagenames(pg::PkgGraph)
+
+Returns the names of the packages in a package dependency graph
+as a vector.
+"""
+packages(pg::PkgGraph) = [pg.i_to_p[k] for k in 1:pg.num_pkg]
+
+"""
+    adjlist(pkg::PkgGraph)
+
+Returns a representation of a package dependency graph as a simple
+adjacency list, using integer indices
+"""
 function adjlist(pg::PkgGraph)
     adj = Vector{Int}[]
-    for i in 1:pg.num_p
+    for i in 1:pg.num_pkg
         push!(adj, collect(out_neighbors(pg.g, i)))
     end
     return adj
 end
 
-# make_dep_graph
-# PkgMetaDict -> PkgGraph
-# Given a PkgMetaDict, build a directed graph with an edge from PkgA
-# to PkgB iff PkgA directly requires PkgB. Alternatively, if reverse
-# is true, reverse the direction of the edges.
-function make_dep_graph(pkgs::PkgMetaDict; reverse=false)
+"""
+    make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
+
+Given a Dict{UTF8String,PkgMeta} (e.g., from get_all_pkg), build a
+directed graph with an edge from PkgA to PkgB iff PkgA directly requires
+PkgB. Alternatively, if reverse is true, reverse the direction of the edges.
+"""
+function make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
     # LightGraphs.jl operates with integer indicies, so assign each
     # package name to an integer and vice versa
     num_pkgs = 0
-    p_to_i = Dict()
-    i_to_p = Dict()
+    p_to_i = Dict{UTF8String,Int}()
+    i_to_p = Dict{Int,UTF8String}()
     for pkg_name in keys(pkgs)
         num_pkgs += 1
         p_to_i[pkg_name] = num_pkgs
         i_to_p[num_pkgs] = pkg_name
     end
 
-    # Initialize graph with one vertex for each package
+    # Initialize LightGraphs graph with one vertex for each package
     g = DiGraph(num_pkgs)
-    
+
     # Build up the edges of the graph
     for (pkg_name, pkg_meta) in pkgs
         if length(pkg_meta.versions) == 0
@@ -81,13 +99,16 @@ function make_dep_graph(pkgs::PkgMetaDict; reverse=false)
             src, dst = p_to_i[other_pkg], p_to_i[pkg_name]
             if reverse
                 !has_edge(g,src,dst) && add_edge!(g,src,dst)
-            else    
+            else
                 !has_edge(g,dst,src) && add_edge!(g,dst,src)
             end
         end
     end
 
-    # Break the cycle
+    # Break the cycle:
+    # LibCURL -> WinRPM (on Windows only)
+    # WinRPM -> HTTPClient (on Unix only)
+    # HTTPClient -> LibCurl
     libcurl = p_to_i["LibCURL"]
     winrpm  = p_to_i["WinRPM"]
     if reverse
@@ -113,7 +134,7 @@ type SubgraphVisitor <: LightGraphs.SimpleGraphVisitor
     cyclewarn
 end
 SubgraphVisitor(depgraph,cyclewarn) =
-    SubgraphVisitor(depgraph, 0, Dict(), DiGraph(depgraph.num_p), cyclewarn)
+    SubgraphVisitor(depgraph, 0, Dict(), DiGraph(depgraph.num_pkg), cyclewarn)
 
 function LightGraphs.discover_vertex!(vis::SubgraphVisitor, v)
     # Give vertex v a new index, if it doesn't have one yet
@@ -139,7 +160,7 @@ function LightGraphs.examine_neighbor!(vis::SubgraphVisitor,
 end
 
 get_pkg_dep_graph(pkg::PkgMeta, depgraph::PkgGraph) = get_pkg_dep_graph(pkg.name, depgraph)
-function get_pkg_dep_graph(pkgname::String, depgraph::PkgGraph; cyclewarn=true)
+function get_pkg_dep_graph(pkgname::AbstractString, depgraph::PkgGraph; cyclewarn=true)
     # Construct the vistor
     vis = SubgraphVisitor(depgraph,cyclewarn)
     # Walk the graph starting from the package in question

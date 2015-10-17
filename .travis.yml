@@ -2,12 +2,14 @@ language: julia
 os:
   - linux
 julia:
-  - release
+  - 0.3
+  - 0.4
   - nightly
 notifications:
   email: false
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.build("MetadataTools"); Pkg.test("MetadataTools"; coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("MetadataTools");"
+  - julie -e 'Pkg.test("MetadataTools"; coverage=true)'
 after_success:
-  - julia -e 'cd(Pkg.dir("MetadataTools")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'cd(Pkg.dir("MetadataTools")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'

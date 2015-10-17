@@ -1,42 +1,51 @@
-#######################################################################
+#-----------------------------------------------------------------------
 # MetadataTools
 # https://github.com/IainNZ/MetadataTools.jl
-# (c) Iain Dunning 2015
+#-----------------------------------------------------------------------
+# Copyright (c) 2015: Iain Dunning
 # Licensed under the MIT License
-#######################################################################
+#-----------------------------------------------------------------------
+
+__precompile__()
 
 module MetadataTools
 
 import Requests, JSON
-using Compat
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
 
-#######################################################################
-# PkgMeta           Represents a packages entry in METADATA.jl
-# PkgMetaVersion    Represents a version of a package in METADATA.jl
+#-----------------------------------------------------------------------
+
+"""
+    PkgMetaVersion
+
+Represents a version of a package in METADATA.jl
+"""
 immutable PkgMetaVersion
     ver::VersionNumber
-    sha::String
-    requires::Vector{String}
+    sha::UTF8String
+    requires::Vector{UTF8String}
 end
-immutable PkgMeta
-    name::String
-    url::String
-    versions::Vector{PkgMetaVersion}
-end
-Base.isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
-(==)(a::PkgMeta, b::PkgMeta) = isequal(a,b)
-
-typealias PkgMetaDict Dict{String,PkgMeta}
-
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
     map(r->print(io, ",",r), pmv.requires)
 end
 Base.print(io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
-Base.show(io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
+Base.show( io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
 
+"""
+    PkgMeta
+
+Represents a packages entry in METADATA.jl
+"""
+immutable PkgMeta
+    name::UTF8String
+    url::UTF8String
+    versions::Vector{PkgMetaVersion}
+end
+Base.isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
+importall Base.Operators
+(==)(a::PkgMeta, b::PkgMeta) = isequal(a,b)
 function printer(io::IO, pm::PkgMeta)
     println(io, pm.name, "   ", pm.url)
     for v in pm.versions[1:end-1]
@@ -47,45 +56,31 @@ function printer(io::IO, pm::PkgMeta)
     end
 end
 Base.print(io::IO, pm::PkgMeta) = printer(io,pm)
-Base.show(io::IO, pm::PkgMeta) = printer(io,pm)
+Base.show( io::IO, pm::PkgMeta) = printer(io,pm)
 
+#-----------------------------------------------------------------------
 
-#######################################################################
-# Contributor           A package contributor as defined by Github
-# PkgInfo               Package info obtained from Github
-immutable Contributor
-    username::String
-    url::String
-end
-immutable PkgInfo
-    html_url::String  # URL of repo, in contrast to METADATA url
-    description::String
-    homepage::String
-    stars::Int
-    watchers::Int
-    contributors::Vector{@compat Tuple{Int,Contributor}}  # (commit_count,Contrib.)
-end
+"""
+    get_pkg(pkg_name; meta_path=Pkg.dir("METADATA"))
 
+Return a PkgMeta with all information about the package listed
+in METADATA, e.g.
 
-#######################################################################
-# get_pkg 
-#   Return a PkgMeta with all information about the package listed
-#   in METADATA, e.g.
-#
-#   julia> get_pkg("DataFrames")
-#   DataFrames   git://github.com/JuliaStats/DataFrames.jl.git
-#     0.0.0,a63047,Options,StatsBase
-#     0.1.0,7b1c6b,julia 0.1- 0.2-,Options,StatsBase
-#     0.2.0,b5f0fe,julia 0.2-,GZip,Options,StatsBase
-#     ...
-#     0.5.7,a8ae61,julia 0.3-,DataArrays,StatsBase 0.3.9+,GZip,Sort...
-#
-function get_pkg(pkg_name::String; meta_path::String=Pkg.dir("METADATA"))
+```
+julia> get_pkg("DataFrames")
+DataFrames   git://github.com/JuliaStats/DataFrames.jl.git
+0.0.0,a63047,Options,StatsBase
+...
+0.5.7,a8ae61,julia 0.3-,DataArrays,StatsBase 0.3.9+,GZip,Sort...
+```
+"""
+function get_pkg(pkg_name::AbstractString;
+                 meta_path=Pkg.dir("METADATA"))
     !isdir(meta_path) && error("Couldn't find METADATA folder at $meta_path")
 
     pkg_path = joinpath(meta_path,pkg_name)
     !isdir(pkg_path) && error("Couldn't find $pkg_name at $pkg_path")
-    
+
     url_path = joinpath(pkg_path,"url")
     !isfile(url_path) && error("Couldn't find url for $pkg_name (expected $url_path)")
     url = chomp(readall(url_path))
@@ -94,14 +89,14 @@ function get_pkg(pkg_name::String; meta_path::String=Pkg.dir("METADATA"))
     !isdir(vers_path) &&
         # No versions tagged
         return PkgMeta(pkg_name, url, PkgMetaVersion[])
-    
+
     vers = PkgMetaVersion[]
     for dir in readdir(vers_path)
         ver_num = convert(VersionNumber, dir)
         ver_path = joinpath(vers_path, dir)
         sha = strip(readall(joinpath(ver_path,"sha1")))
         req_path = joinpath(ver_path,"requires")
-        reqs = String[]
+        reqs = UTF8String[]
         if isfile(req_path)
             req_file = map(strip,split(readall(req_path),"\n"))
             for req in req_file
@@ -117,15 +112,16 @@ function get_pkg(pkg_name::String; meta_path::String=Pkg.dir("METADATA"))
     return PkgMeta(pkg_name, url, vers)
 end
 
+"""
+    get_all_pkg(; meta_path=Pkg.dir("METADATA"))
 
-#######################################################################
-# get_all_pkg
-# Returns a dictionary of [package_name => PkgMeta] for every package
-# in a METADATA folder.
-function get_all_pkg(; meta_path::String=Pkg.dir("METADATA"))
+Returns a dictionary of pairs (pkg_name => PkgMeta) for every package
+in the METADATA folder.
+"""
+function get_all_pkg(; meta_path=Pkg.dir("METADATA"))
     !isdir(meta_path) && error("Couldn't find METADATA folder at $meta_path")
-    
-    pkgs = Dict{String,PkgMeta}()
+
+    pkgs = Dict{UTF8String,PkgMeta}()
     for fname in readdir(meta_path)
         # Skip files
         !isdir(joinpath(meta_path, fname)) && continue
@@ -138,13 +134,14 @@ function get_all_pkg(; meta_path::String=Pkg.dir("METADATA"))
     return pkgs
 end
 
+"""
+    get_upper_limit(pkg_meta::PkgMeta)
 
-#######################################################################
-# get_upper_limit
-# Run through all versions of a package to try to determine if there
-# is an upper limit on the Julia version this package is installable
-# on. Does so by checking all Julia requirements across all versions.
-# If there is a limit, returns that version, otherwise v0.0.0
+Run through all versions of a package to try to determine if there
+is an upper limit on the Julia version this package is installable
+on. Does so by checking all Julia requirements across all versions.
+If there is a limit, returns that version, otherwise return v0.0.0
+"""
 function get_upper_limit(pkg::PkgMeta)
     upper = v"0.0.0"
     all_max = true
@@ -173,12 +170,7 @@ function get_upper_limit(pkg::PkgMeta)
     return all_max ? upper : v"0.0.0"
 end
 
-#######################################################################
-# Functionality to get information about a package, currently all
-# from Github but other providers could be supported.
-include("pkg_info.jl")
-
-#######################################################################
+#-----------------------------------------------------------------------
 # Functionality for operations on the package dependency graph
 include("pkg_graph.jl")
 

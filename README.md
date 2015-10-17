@@ -13,4 +13,5 @@ Functionality to analyze the structure of Julia's METADATA repository.
 
 ## Documentation
 
-This code is mostly documented by comments (and will be updated to docstrings once Julia 0.4 comes out). Check out the code and if you have further questions please file an issue.
+This code is mostly documented by docstrings.
+If you have further questions, please file an issue.
