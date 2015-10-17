@@ -111,7 +111,7 @@ package. Optional keyword argument controls depth - depth=2 is just the
 immediate dependencies.
 """
 function get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph; depth=Inf)
-    get_pkg_dep_graph(pkg.name, depgraph, depth=depth)
+    get_pkg_dep_graph(pkg.name, pg, depth=depth)
 end
 function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph; depth=Inf)
     # Run a DFS to find the connected component
