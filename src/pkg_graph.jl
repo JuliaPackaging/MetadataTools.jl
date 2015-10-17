@@ -12,8 +12,6 @@
 
 export make_dep_graph, get_pkg_dep_graph
 
-using LightGraphs
-
 """
     PkgGraph
 
@@ -21,26 +19,25 @@ A lightweight wrapper around a LightGraphs.jl representation of a
 package dependency graph.
 """
 type PkgGraph
-    g::DiGraph
-    num_pkg::Int  # True number of packages, possibly != nv(g)
-    p_to_i::Dict{UTF8String,Int}  # Package names to an internal index
-    i_to_p::Dict{Int,UTF8String}  # Internal index to package name
+    adjlist::Vector{Vector{Int}}
+    pkgnames::Vector{UTF8String}
+    pkgname_idx::Dict{UTF8String,Int}
 end
 
 """
-    numpackages(pg::PkgGraph)
+    size(pg::PkgGraph)
 
 Returns the number of packages in a package dependency graph.
 """
-numpackages(pg::PkgGraph) = pg.num_pkg
+Base.size(pg::PkgGraph) = length(pg.adjlist)
 
 """
-    packagenames(pg::PkgGraph)
+    packages(pg::PkgGraph)
 
 Returns the names of the packages in a package dependency graph
 as a vector.
 """
-packages(pg::PkgGraph) = [pg.i_to_p[k] for k in 1:pg.num_pkg]
+packages(pg::PkgGraph) = copy(pkgnames)
 
 """
     adjlist(pkg::PkgGraph)
@@ -48,35 +45,21 @@ packages(pg::PkgGraph) = [pg.i_to_p[k] for k in 1:pg.num_pkg]
 Returns a representation of a package dependency graph as a simple
 adjacency list, using integer indices
 """
-function adjlist(pg::PkgGraph)
-    adj = Vector{Int}[]
-    for i in 1:pg.num_pkg
-        push!(adj, collect(out_neighbors(pg.g, i)))
-    end
-    return adj
-end
+adjlist(pg::PkgGraph) = pg.adjlist
 
 """
     make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
 
-Given a Dict{UTF8String,PkgMeta} (e.g., from get_all_pkg), build a
+Given a Dict{UTF8String,PkgMeta} (e.g., from `get_all_pkg`), build a
 directed graph with an edge from PkgA to PkgB iff PkgA directly requires
-PkgB. Alternatively, if reverse is true, reverse the direction of the edges.
+PkgB. Alternatively reverse the direction of the edges if `reverse` is true.
 """
 function make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
-    # LightGraphs.jl operates with integer indicies, so assign each
-    # package name to an integer and vice versa
-    num_pkgs = 0
-    p_to_i = Dict{UTF8String,Int}()
-    i_to_p = Dict{Int,UTF8String}()
-    for pkg_name in keys(pkgs)
-        num_pkgs += 1
-        p_to_i[pkg_name] = num_pkgs
-        i_to_p[num_pkgs] = pkg_name
-    end
-
-    # Initialize LightGraphs graph with one vertex for each package
-    g = DiGraph(num_pkgs)
+    pkgnames = collect(keys(pkgs))
+    pkgname_idx = Dict{UTF8String,Int}(
+        [pkgname => i for (i,pkgname) in enumerate(pkgnames)])
+    numpkg   = length(pkgnames)
+    adjlist  = Vector{Int}[Vector{Int}() for pkgname in pkgnames]
 
     # Build up the edges of the graph
     for (pkg_name, pkg_meta) in pkgs
@@ -96,85 +79,71 @@ function make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
             end
             # Strip OS-specific conditions
             other_pkg = (req[1] == '@') ? split(req," ")[2] : split(req," ")[1]
-            src, dst = p_to_i[other_pkg], p_to_i[pkg_name]
+            # Special case the the cycle:
+            # LibCURL -> WinRPM (on Windows only)
+            # WinRPM -> HTTPClient (on Unix only)
+            # HTTPClient -> LibCurl
+            # by breaking WinRPM -> HTTPClient
+            if pkg_name == "WinRPM" && other_pkg == "HTTPClient"
+                continue
+            end
+            # Map names to indices
+            src, dst = pkgname_idx[pkg_name], pkgname_idx[other_pkg]
+            # Add the directed edge
             if reverse
-                !has_edge(g,src,dst) && add_edge!(g,src,dst)
-            else
-                !has_edge(g,dst,src) && add_edge!(g,dst,src)
+                dst, src = src, dst
+            end
+            if dst ∉ adjlist[src]
+                push!(adjlist[src], dst)
             end
         end
     end
 
-    # Break the cycle:
-    # LibCURL -> WinRPM (on Windows only)
-    # WinRPM -> HTTPClient (on Unix only)
-    # HTTPClient -> LibCurl
-    libcurl = p_to_i["LibCURL"]
-    winrpm  = p_to_i["WinRPM"]
-    if reverse
-        rem_edge!(g,winrpm,libcurl)
-    else
-        rem_edge!(g,libcurl,winrpm)
-    end
-
-    return PkgGraph(g, nv(g), p_to_i, i_to_p)
+    return PkgGraph(adjlist, pkgnames, pkgname_idx)
 end
 
-# get_pkg_dep_graph
-# (String, PkgGraph) -> PkgGraph
-# (PkgMeta, PkgGraph) -> PkgGraph
-# Get the dep. graph for a single package by running a traversal on
-# the full dep. graph starting from the desired package. Uses a
-# LightGraphs.jl visitor, we pass that into the traversal algorithm
-type SubgraphVisitor <: LightGraphs.SimpleGraphVisitor
-    old_depgraph
-    num_v
-    old_i_to_new_i
-    new_graph
-    cyclewarn
-end
-SubgraphVisitor(depgraph,cyclewarn) =
-    SubgraphVisitor(depgraph, 0, Dict(), DiGraph(depgraph.num_pkg), cyclewarn)
+"""
+    get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph)
+    get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph)
 
-function LightGraphs.discover_vertex!(vis::SubgraphVisitor, v)
-    # Give vertex v a new index, if it doesn't have one yet
-    if v ∉ keys(vis.old_i_to_new_i)
-        vis.num_v += 1
-        vis.old_i_to_new_i[v] = vis.num_v
-    end
-    true
+Returns a subgraph of the package dependency graph starting at a given
+package.
+"""
+function get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph)
+    get_pkg_dep_graph(pkg.name, depgraph)
 end
-function LightGraphs.examine_neighbor!(vis::SubgraphVisitor,
-                                        u, v,
-                                        vcolor::Int, ecolor::Int)
-    # Make sure we have indices for the neighbour
-    if v ∉ keys(vis.old_i_to_new_i)
-        vis.num_v += 1
-        vis.old_i_to_new_i[v] = vis.num_v
-    end
-    # Add the edge to the visitor's graph
-    src, dst = vis.old_i_to_new_i[u], vis.old_i_to_new_i[v]
-    if !has_edge(vis.new_graph, src, dst)
-        add_edge!(vis.new_graph, src, dst)
-    end
-end
-
-get_pkg_dep_graph(pkg::PkgMeta, depgraph::PkgGraph) = get_pkg_dep_graph(pkg.name, depgraph)
-function get_pkg_dep_graph(pkgname::AbstractString, depgraph::PkgGraph; cyclewarn=true)
-    # Construct the vistor
-    vis = SubgraphVisitor(depgraph,cyclewarn)
-    # Walk the graph starting from the package in question
-    traverse_graph(depgraph.g, LightGraphs.DepthFirst(),
-                    depgraph.p_to_i[pkgname], vis)
-    # The new graph will have vertices in a new index scheme
-    p_to_i, i_to_p = Dict(), Dict()
-    for (p, i) in depgraph.p_to_i
-        if i in keys(vis.old_i_to_new_i)
-            # This vertex is in the final graph
-            i_new = vis.old_i_to_new_i[i]
-            p_to_i[p] = i_new
-            i_to_p[i_new] = p
+function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph)
+    # Run a DFS to find the connected component
+    # While doing so, building a mapping from old indices to
+    # new indices in the subgraph
+    n = size(pg)
+    visited = zeros(Bool, n)
+    stack = Int[pg.pkgname_idx[pkgname]]
+    old_idx_to_new_idx = Dict{Int,Int}()
+    new_n = 0
+    while length(stack) > 0
+        cur_idx = pop!(stack)
+        visited[cur_idx] && continue
+        visited[cur_idx] = true
+        new_n += 1
+        old_idx_to_new_idx[cur_idx] = new_n
+        for dep_idx in pg.adjlist[cur_idx]
+            !visited[dep_idx] && push!(stack, dep_idx)
         end
     end
-    return PkgGraph(vis.new_graph, length(i_to_p), p_to_i, i_to_p)
+    # Build subgraph
+    new_pkgnames = UTF8String["" for i in 1:new_n]
+    new_pkgname_idx = Dict{UTF8String,Int}()
+    new_adjlist  = Vector{Int}[Vector{Int}() for i in 1:new_n]
+    for old_idx in 1:n
+        !visited[old_idx] && continue
+        new_idx = old_idx_to_new_idx[old_idx]
+        new_pkgnames[new_idx] = pg.pkgnames[old_idx]
+        new_pkgname_idx[pg.pkgnames[old_idx]] = new_idx
+        for old_dep_idx in pg.adjlist[old_idx]
+            new_dep_idx = old_idx_to_new_idx[old_dep_idx]
+            push!(new_adjlist[new_idx], new_dep_idx)
+        end
+    end
+    return PkgGraph(new_adjlist, new_pkgnames, new_pkgname_idx)
 end

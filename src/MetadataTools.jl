@@ -10,8 +10,6 @@ __precompile__()
 
 module MetadataTools
 
-import Requests, JSON
-
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
 
 #-----------------------------------------------------------------------
@@ -43,9 +41,6 @@ immutable PkgMeta
     url::UTF8String
     versions::Vector{PkgMetaVersion}
 end
-Base.isequal(a::PkgMeta, b::PkgMeta) = (a.name == b.name && a.url == b.url)
-importall Base.Operators
-(==)(a::PkgMeta, b::PkgMeta) = isequal(a,b)
 function printer(io::IO, pm::PkgMeta)
     println(io, pm.name, "   ", pm.url)
     for v in pm.versions[1:end-1]
