@@ -103,32 +103,39 @@ function make_dep_graph(pkgs::Dict{UTF8String,PkgMeta}; reverse=false)
 end
 
 """
-    get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph)
-    get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph)
+    get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph; depth=Inf)
+    get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph; depth=Inf)
 
 Returns a subgraph of the package dependency graph starting at a given
-package.
+package. Optional keyword argument controls depth - depth=2 is just the
+immediate dependencies.
 """
-function get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph)
-    get_pkg_dep_graph(pkg.name, depgraph)
+function get_pkg_dep_graph(pkg::PkgMeta, pg::PkgGraph; depth=Inf)
+    get_pkg_dep_graph(pkg.name, depgraph, depth=depth)
 end
-function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph)
+function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph; depth=Inf)
     # Run a DFS to find the connected component
     # While doing so, building a mapping from old indices to
     # new indices in the subgraph
     n = size(pg)
     visited = zeros(Bool, n)
     stack = Int[pg.pkgname_idx[pkgname]]
+    depth_stack = Int[1]
     old_idx_to_new_idx = Dict{Int,Int}()
     new_n = 0
     while length(stack) > 0
         cur_idx = pop!(stack)
+        cur_depth = pop!(depth_stack)
         visited[cur_idx] && continue
+        cur_depth > depth && continue
         visited[cur_idx] = true
         new_n += 1
         old_idx_to_new_idx[cur_idx] = new_n
         for dep_idx in pg.adjlist[cur_idx]
-            !visited[dep_idx] && push!(stack, dep_idx)
+            if !visited[dep_idx]
+                push!(stack, dep_idx)
+                push!(depth_stack, cur_depth + 1)
+            end
         end
     end
     # Build subgraph
@@ -141,8 +148,10 @@ function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph)
         new_pkgnames[new_idx] = pg.pkgnames[old_idx]
         new_pkgname_idx[pg.pkgnames[old_idx]] = new_idx
         for old_dep_idx in pg.adjlist[old_idx]
-            new_dep_idx = old_idx_to_new_idx[old_dep_idx]
-            push!(new_adjlist[new_idx], new_dep_idx)
+            if visited[old_dep_idx]  # might not have due to depth
+                new_dep_idx = old_idx_to_new_idx[old_dep_idx]
+                push!(new_adjlist[new_idx], new_dep_idx)
+            end
         end
     end
     return PkgGraph(new_adjlist, new_pkgnames, new_pkgname_idx)
