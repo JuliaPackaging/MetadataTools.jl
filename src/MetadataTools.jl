@@ -12,6 +12,8 @@ module MetadataTools
 
 export get_pkg, get_all_pkg, get_upper_limit, get_pkg_info
 
+using Compat
+
 #-----------------------------------------------------------------------
 
 """
@@ -21,8 +23,8 @@ Represents a version of a package in METADATA.jl
 """
 immutable PkgMetaVersion
     ver::VersionNumber
-    sha::UTF8String
-    requires::Vector{UTF8String}
+    sha::Compat.UTF8String
+    requires::Vector{Compat.UTF8String}
 end
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
@@ -37,8 +39,8 @@ Base.show( io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
 Represents a packages entry in METADATA.jl
 """
 immutable PkgMeta
-    name::UTF8String
-    url::UTF8String
+    name::Compat.UTF8String
+    url::Compat.UTF8String
     versions::Vector{PkgMetaVersion}
 end
 function printer(io::IO, pm::PkgMeta)
@@ -78,7 +80,7 @@ function get_pkg(pkg_name::AbstractString;
 
     url_path = joinpath(pkg_path,"url")
     !isfile(url_path) && error("Couldn't find url for $pkg_name (expected $url_path)")
-    url = chomp(readall(url_path))
+    url = chomp(readstring(url_path))
 
     vers_path = joinpath(pkg_path,"versions")
     !isdir(vers_path) &&
@@ -89,11 +91,11 @@ function get_pkg(pkg_name::AbstractString;
     for dir in readdir(vers_path)
         ver_num = convert(VersionNumber, dir)
         ver_path = joinpath(vers_path, dir)
-        sha = strip(readall(joinpath(ver_path,"sha1")))
+        sha = strip(readstring(joinpath(ver_path,"sha1")))
         req_path = joinpath(ver_path,"requires")
-        reqs = UTF8String[]
+        reqs = Compat.UTF8String[]
         if isfile(req_path)
-            req_file = map(strip,split(readall(req_path),"\n"))
+            req_file = map(strip,split(readstring(req_path),"\n"))
             for req in req_file
                 length(req) == 0 && continue
                 req[1] == '#' && continue
@@ -116,7 +118,7 @@ in the METADATA folder.
 function get_all_pkg(; meta_path=Pkg.dir("METADATA"))
     !isdir(meta_path) && error("Couldn't find METADATA folder at $meta_path")
 
-    pkgs = Dict{UTF8String,PkgMeta}()
+    pkgs = Dict{Compat.UTF8String,PkgMeta}()
     for fname in readdir(meta_path)
         # Skip files
         !isdir(joinpath(meta_path, fname)) && continue
