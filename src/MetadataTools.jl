@@ -17,6 +17,32 @@ using Compat
 #-----------------------------------------------------------------------
 
 """
+    PkgMetaRequire
+
+Represents a single requirement in METADATA.jl
+"""
+immutable PkgMetaRequire
+    name::String
+    lower_bound::Nullable{VersionNumber}
+    upper_bound::Nullable{VersionNumber}
+    platform::Nullable{String}
+end
+function printer(io::IO, pmr::PkgMetaRequire)
+    print(io, pmr.name)
+    if !(isnull(pmr.lower_bound) && isnull(pmr.upper_bound) && isnull(pmr.platform))
+        print(io, "(")
+        limits = String[]
+        isnull(pmr.lower_bound) || push!(limits, ">$(get(pmr.lower_bound))")
+        isnull(pmr.upper_bound) || push!(limits, "<$(get(pmr.upper_bound))")
+        isnull(pmr.platform) || push!(limits, "@$(get(pmr.platform))")
+        join(io, limits, ",")
+        print(io, ")")
+    end
+end
+Base.print(io::IO, pmr::PkgMetaRequire) = printer(io,pmr)
+Base.show(io::IO, pmr::PkgMetaRequire) = printer(io, pmr)
+
+"""
     PkgMetaVersion
 
 Represents a version of a package in METADATA.jl
@@ -24,7 +50,7 @@ Represents a version of a package in METADATA.jl
 immutable PkgMetaVersion
     ver::VersionNumber
     sha::Compat.UTF8String
-    requires::Vector{Compat.UTF8String}
+    requires::Vector{PkgMetaRequire}
 end
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
@@ -93,13 +119,17 @@ function get_pkg(pkg_name::AbstractString;
         ver_path = joinpath(vers_path, dir)
         sha = strip(readstring(joinpath(ver_path,"sha1")))
         req_path = joinpath(ver_path,"requires")
-        reqs = Compat.UTF8String[]
+        reqs = PkgMetaRequire[]
         if isfile(req_path)
             req_file = map(strip,split(readstring(req_path),"\n"))
             for req in req_file
-                length(req) == 0 && continue
-                req[1] == '#' && continue
-                push!(reqs, req)
+                m = match(r"^(@\w+\s+)?(\w+)(\s+[\d.-]+)?(\s+[\d.-]+)?", req)
+                m === nothing && continue
+
+                plt, dep, lb, ub = m.captures
+
+                require_data = PkgMetaRequire(dep, lb === nothing ? Nullable{VersionNumber}() : lstrip(lb), ub === nothing ? Nullable{VersionNumber}() : lstrip(ub), plt === nothing ? Nullable{String}() : rstrip(plt)[2:end])
+                push!(reqs, require_data)
             end
         end
         push!(vers,PkgMetaVersion(ver_num,sha,reqs))
@@ -146,10 +176,9 @@ function get_upper_limit(pkg::PkgMeta)
         julia_max_ver = v"0.0.0"
         # Check if there is a Julia max version dependency
         for req in ver.requires
-            !contains(req,"julia") && continue
-            s = split(req," ")
-            length(s) != 3 && continue
-            julia_max_ver = convert(VersionNumber,s[3])
+            req.name!="julia" && continue
+            isnull(req.upper_bound) && continue
+            julia_max_ver = get(req.upper_bound)
             break
         end
         # If there wasn't, then at least one version will work on
