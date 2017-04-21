@@ -73,7 +73,7 @@ function make_dep_graph(pkgs::Dict{Compat.UTF8String,PkgMeta}; reverse=false)
         # TODO: add an option to modify this behaviour.
         pkg_ver = pkg_meta.versions[end]
         for req in pkg_ver.requires
-            if req.name=="julia"
+            if req.package=="julia"
                 # Julia version dependency, skip it
                 continue
             end
@@ -82,11 +82,11 @@ function make_dep_graph(pkgs::Dict{Compat.UTF8String,PkgMeta}; reverse=false)
             # WinRPM -> HTTPClient (on Unix only)
             # HTTPClient -> LibCurl
             # by breaking WinRPM -> HTTPClient
-            if pkg_name == "WinRPM" && req.name == "HTTPClient"
+            if pkg_name == "WinRPM" && req.package == "HTTPClient"
                 continue
             end
             # Map names to indices
-            src, dst = pkgname_idx[pkg_name], pkgname_idx[req.name]
+            src, dst = pkgname_idx[pkg_name], pkgname_idx[req.package]
             # Add the directed edge
             if reverse
                 dst, src = src, dst
