@@ -145,6 +145,9 @@ function get_upper_limit(pkg::PkgMeta)
             req.package!="julia" && continue
             any(i->i.upper!=typemax(VersionNumber), req.versions.intervals) || continue
             # TODO Handle multiple entries in req.versions.intervals properly
+            if length(req.versions.intervals[1]) > 1
+                error("This package cannot handle package requirements with multiple version intervals.")
+            end
             julia_max_ver = req.versions.intervals[1].upper
             break
         end
