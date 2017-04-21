@@ -24,7 +24,7 @@ Represents a version of a package in METADATA.jl
 immutable PkgMetaVersion
     ver::VersionNumber
     sha::Compat.UTF8String
-    requires::Vector{Compat.UTF8String}
+    requires::Vector{Base.Pkg.Reqs.Requirement}
 end
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
@@ -93,14 +93,10 @@ function get_pkg(pkg_name::AbstractString;
         ver_path = joinpath(vers_path, dir)
         sha = strip(readstring(joinpath(ver_path,"sha1")))
         req_path = joinpath(ver_path,"requires")
-        reqs = Compat.UTF8String[]
+        reqs = Base.Pkg.Reqs.Requirement[]
         if isfile(req_path)
             req_file = map(strip,split(readstring(req_path),"\n"))
-            for req in req_file
-                length(req) == 0 && continue
-                req[1] == '#' && continue
-                push!(reqs, req)
-            end
+            append!(reqs, filter(i->isa(i,Base.Pkg.Reqs.Requirement), Base.Pkg.Reqs.read(req_file)))
         end
         push!(vers,PkgMetaVersion(ver_num,sha,reqs))
     end
@@ -146,10 +142,13 @@ function get_upper_limit(pkg::PkgMeta)
         julia_max_ver = v"0.0.0"
         # Check if there is a Julia max version dependency
         for req in ver.requires
-            !contains(req,"julia") && continue
-            s = split(req," ")
-            length(s) != 3 && continue
-            julia_max_ver = convert(VersionNumber,s[3])
+            req.package!="julia" && continue
+            any(i->i.upper!=typemax(VersionNumber), req.versions.intervals) || continue
+            # TODO Handle multiple entries in req.versions.intervals properly
+            if length(req.versions.intervals[1]) > 1
+                error("This package cannot handle package requirements with multiple version intervals.")
+            end
+            julia_max_ver = req.versions.intervals[1].upper
             break
         end
         # If there wasn't, then at least one version will work on
