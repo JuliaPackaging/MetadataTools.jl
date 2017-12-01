@@ -18,10 +18,10 @@ export make_dep_graph, get_pkg_dep_graph
 A lightweight wrapper around a LightGraphs.jl representation of a
 package dependency graph.
 """
-type PkgGraph
+mutable struct PkgGraph
     adjlist::Vector{Vector{Int}}
-    pkgnames::Vector{Compat.UTF8String}
-    pkgname_idx::Dict{Compat.UTF8String,Int}
+    pkgnames::Vector{String}
+    pkgname_idx::Dict{String,Int}
 end
 
 """
@@ -54,10 +54,9 @@ Given a Dict{UTF8String,PkgMeta} (e.g., from `get_all_pkg`), build a
 directed graph with an edge from PkgA to PkgB iff PkgA directly requires
 PkgB. Alternatively reverse the direction of the edges if `reverse` is true.
 """
-function make_dep_graph(pkgs::Dict{Compat.UTF8String,PkgMeta}; reverse=false)
+function make_dep_graph(pkgs::Dict{String,PkgMeta}; reverse=false)
     pkgnames = collect(keys(pkgs))
-    pkgname_idx = Dict{Compat.UTF8String,Int}(
-        [(pkgname, i) for (i,pkgname) in enumerate(pkgnames)])  # TODO: Dict(pkgname=>i for ...)
+    pkgname_idx = Dict{String,Int}(pkgname => i for (i, pkgname) in enumerate(pkgnames))
     numpkg   = length(pkgnames)
     adjlist  = Vector{Int}[Vector{Int}() for pkgname in pkgnames]
 
@@ -139,8 +138,8 @@ function get_pkg_dep_graph(pkgname::AbstractString, pg::PkgGraph; depth=Inf)
         end
     end
     # Build subgraph
-    new_pkgnames = Compat.UTF8String["" for i in 1:new_n]
-    new_pkgname_idx = Dict{Compat.UTF8String,Int}()
+    new_pkgnames = String["" for i in 1:new_n]
+    new_pkgname_idx = Dict{String,Int}()
     new_adjlist  = Vector{Int}[Vector{Int}() for i in 1:new_n]
     for old_idx in 1:n
         !visited[old_idx] && continue

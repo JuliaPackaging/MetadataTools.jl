@@ -21,10 +21,10 @@ using Compat
 
 Represents a version of a package in METADATA.jl
 """
-immutable PkgMetaVersion
+struct PkgMetaVersion
     ver::VersionNumber
-    sha::Compat.UTF8String
-    requires::Vector{Compat.UTF8String}
+    sha::String
+    requires::Vector{String}
 end
 function printer(io::IO, pmv::PkgMetaVersion)
     print(io, "  ", pmv.ver, ",", pmv.sha[1:6])
@@ -38,9 +38,9 @@ Base.show( io::IO, pmv::PkgMetaVersion) = printer(io,pmv)
 
 Represents a packages entry in METADATA.jl
 """
-immutable PkgMeta
-    name::Compat.UTF8String
-    url::Compat.UTF8String
+struct PkgMeta
+    name::String
+    url::String
     versions::Vector{PkgMetaVersion}
 end
 function printer(io::IO, pm::PkgMeta)
@@ -80,7 +80,7 @@ function get_pkg(pkg_name::AbstractString;
 
     url_path = joinpath(pkg_path,"url")
     !isfile(url_path) && error("Couldn't find url for $pkg_name (expected $url_path)")
-    url = chomp(readstring(url_path))
+    url = readchomp(url_path)
 
     vers_path = joinpath(pkg_path,"versions")
     !isdir(vers_path) &&
@@ -91,11 +91,11 @@ function get_pkg(pkg_name::AbstractString;
     for dir in readdir(vers_path)
         ver_num = convert(VersionNumber, dir)
         ver_path = joinpath(vers_path, dir)
-        sha = strip(readstring(joinpath(ver_path,"sha1")))
+        sha = strip(read(joinpath(ver_path,"sha1"), String))
         req_path = joinpath(ver_path,"requires")
-        reqs = Compat.UTF8String[]
+        reqs = String[]
         if isfile(req_path)
-            req_file = map(strip,split(readstring(req_path),"\n"))
+            req_file = map(strip, split(read(req_path, String), "\n"))
             for req in req_file
                 length(req) == 0 && continue
                 req[1] == '#' && continue
@@ -118,7 +118,7 @@ in the METADATA folder.
 function get_all_pkg(; meta_path=Pkg.dir("METADATA"))
     !isdir(meta_path) && error("Couldn't find METADATA folder at $meta_path")
 
-    pkgs = Dict{Compat.UTF8String,PkgMeta}()
+    pkgs = Dict{String,PkgMeta}()
     for fname in readdir(meta_path)
         # Skip files
         !isdir(joinpath(meta_path, fname)) && continue
